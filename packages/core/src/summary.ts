@@ -37,6 +37,7 @@ export function summarizeMonth(rows: SummaryRow[], month: string, now: string | 
   let total = 0;
   let prevTotal = 0;
   const groups = new Map<string, BucketTotal>();
+  const nonSpend = new Map<string, BucketTotal>();
   const cats = new Map<string, BucketTotal>();
   const daily = Array.from({ length: dim }, () => 0);
   let needsReview = 0;
@@ -46,7 +47,11 @@ export function summarizeMonth(rows: SummaryRow[], month: string, now: string | 
     const inMonth = r.occurred_at >= range.start && r.occurred_at < range.end;
     const inPrev = r.occurred_at >= prevRange.start && r.occurred_at < prevRange.end;
     if (!inMonth && !inPrev) continue;
-    if (!isSpend(r)) continue;
+    if (!isSpend(r)) {
+      // Display-only totals for groups that don't count as spend (e.g. Savings bar on Home).
+      if (inMonth && r.group_id && r.status !== "void" && !r.is_excluded && !r.is_reimbursable) bump(nonSpend, r.group_id, signedSgdMinor(r));
+      continue;
+    }
     const amt = signedSgdMinor(r);
     if (inPrev) prevTotal += amt;
     if (!inMonth) continue;
@@ -60,7 +65,7 @@ export function summarizeMonth(rows: SummaryRow[], month: string, now: string | 
 
   return {
     month, total, totalLastMonthToDate: prevTotal,
-    byGroup: [...groups.values()], byCategory: [...cats.values()].sort((a, b) => b.spent - a.spent),
+    byGroup: [...groups.values()], byGroupNonSpend: [...nonSpend.values()], byCategory: [...cats.values()].sort((a, b) => b.spent - a.spent),
     daily, needsReviewCount: needsReview, pendingCount: pending, daysInMonth: dim, day,
   };
 }

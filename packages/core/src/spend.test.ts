@@ -57,6 +57,12 @@ describe("summarizeMonth", () => {
     expect(s.day).toBe(14);
     expect(s.daysInMonth).toBe(31);
   });
+  it("reports non-spend groups separately and never in the total", () => {
+    const rows = [row({ amount_sgd_minor: 20000, group_id: "savings", category_id: "savings", group_counts_as_spend: 0 }), row({ amount_sgd_minor: 100 })];
+    const s = summarizeMonth(rows, "2026-10", now);
+    expect(s.total).toBe(100);
+    expect(s.byGroupNonSpend).toEqual([{ id: "savings", spent: 20000, count: 1 }]);
+  });
   it("compares to the same day last month", () => {
     const rows = [
       row({ occurred_at: "2026-09-10T04:00:00Z", amount_sgd_minor: 1000 }), // inside Sep 1..14

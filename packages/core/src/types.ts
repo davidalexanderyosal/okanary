@@ -28,6 +28,8 @@ export interface MonthSummary {
   /** Same total through the same calendar day of the previous month. */
   totalLastMonthToDate: number;
   byGroup: BucketTotal[];
+  /** Groups with counts_as_spend=0 (Savings, Income, Transfers): display-only, never part of `total`. */
+  byGroupNonSpend: BucketTotal[];
   byCategory: BucketTotal[];
   /** Spend per SGT day: index 0 = day 1. */
   daily: number[];

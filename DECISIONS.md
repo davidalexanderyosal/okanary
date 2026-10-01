@@ -12,3 +12,4 @@ Format: **ID — decision** · reason · alternatives.
 - **D-08 — Phase 1 is SGD-first:** non-SGD transactions via the API must supply `amount_sgd_minor` (`fx_source='manual'`); automatic FX arrives in Phase 4.
 - **D-09 — IDs are ULIDs** generated in the Worker (sortable, no coordination).
 - **D-10 — Transaction delete is a hard delete** in Phase 1 (manual entries); `void` status remains for auto-captured items.
+- **D-11 — Branching:** the first scaffold commit (331c240) was accidentally pushed to `main`; all further work goes to `claude/okanary-phases-0-5`. `main` was not rewritten (no force-push without the owner's say-so).
