@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { Account } from "@okanary/core";
-import { api } from "../lib/api";
+import { api, type Trip } from "../lib/api";
 import { invalidateAll, useResource } from "../lib/data";
 import { useRefData } from "../lib/refdata";
 import { useToast } from "../components/Toast";
@@ -52,11 +52,43 @@ function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => voi
   );
 }
 
+function TripForm({ initial, onDone }: { initial?: Trip; onDone: () => void }) {
+  const toast = useToast();
+  const [v, setV] = useState({ name: initial?.name ?? "", start: initial?.start_date ?? "", end: initial?.end_date ?? "", currency: initial?.currency ?? "" });
+  async function save() {
+    const body = { name: v.name.trim(), start_date: v.start || null, end_date: v.end || null, currency: v.currency || null };
+    try {
+      if (initial) await api.patchTrip(initial.id, body); else await api.createTrip(body);
+      invalidateAll();
+      onDone();
+    } catch (e) { toast({ msg: `Couldn't save: ${e instanceof Error ? e.message : e}` }); }
+  }
+  return (
+    <div className="space-y-2 rounded-2xl bg-bg p-3">
+      <input className={field} placeholder="Trip name (e.g. Tokyo Dec 2026)" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
+      <div className="flex gap-2">
+        <input type="date" className={field} value={v.start} onChange={(e) => setV({ ...v, start: e.target.value })} aria-label="Start date" />
+        <input type="date" className={field} value={v.end} onChange={(e) => setV({ ...v, end: e.target.value })} aria-label="End date" />
+      </div>
+      <select className={field} value={v.currency} onChange={(e) => setV({ ...v, currency: e.target.value })} aria-label="Trip currency">
+        <option value="">Currency: none</option>
+        {["IDR", "JPY", "USD", "MYR", "EUR", "GBP", "THB", "AUD", "KRW"].map((c) => <option key={c} value={c}>{c}</option>)}
+      </select>
+      <div className="flex gap-2">
+        <button className="tap rounded-xl border border-line px-4" onClick={onDone}>Cancel</button>
+        <button className="tap flex-1 rounded-xl bg-accent font-semibold text-accent-fg disabled:opacity-40" disabled={!v.name.trim()} onClick={() => void save()}>Save</button>
+      </div>
+    </div>
+  );
+}
+
 export function Settings() {
   const ref = useRefData();
   const rules = useResource("rules", api.rules);
   const toast = useToast();
+  const trips = useResource("trips", api.trips);
   const [editing, setEditing] = useState<string | "new" | null>(null);
+  const [editingTrip, setEditingTrip] = useState<string | "new" | null>(null);
   const [newCat, setNewCat] = useState<{ group: string; name: string }>({ group: "lifestyle", name: "" });
 
   return (
@@ -102,6 +134,24 @@ export function Settings() {
           <button className="tap rounded-xl bg-accent px-4 font-semibold text-accent-fg disabled:opacity-40" disabled={!newCat.name.trim()}
             onClick={() => void api.createCategory({ group_id: newCat.group, name: newCat.name.trim() }).then(() => { invalidateAll(); setNewCat({ ...newCat, name: "" }); }).catch((e) => toast({ msg: String(e) }))}>Add</button>
         </div>
+      </section>
+
+      <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm">
+        <div className="flex items-center justify-between pb-2"><h2 className="text-sm font-semibold text-muted">Trips</h2>
+          <button className="tap text-sm font-medium text-accent" onClick={() => setEditingTrip("new")}>+ Add</button></div>
+        {(trips.data ?? []).length === 0 && editingTrip !== "new" && <p className="pb-1 text-sm text-muted">Trips tag purchases by date and suggest the trip's currency in Quick add.</p>}
+        {editingTrip === "new" && <TripForm onDone={() => setEditingTrip(null)} />}
+        {(trips.data ?? []).map((t) => editingTrip === t.id ? (
+          <TripForm key={t.id} initial={t} onDone={() => setEditingTrip(null)} />
+        ) : (
+          <div key={t.id} className="flex items-center justify-between">
+            <button className="tap flex-1 text-left" onClick={() => setEditingTrip(t.id)}>
+              <span className="block font-medium">{t.name}</span>
+              <span className="block text-xs text-muted">{t.start_date ?? "?"} → {t.end_date ?? "?"}{t.currency ? ` · ${t.currency}` : ""}</span>
+            </button>
+            <button className="tap text-sm text-danger" onClick={() => window.confirm(`Delete “${t.name}”? Its transactions stay, untagged.`) && void api.deleteTrip(t.id).then(invalidateAll)}>Delete</button>
+          </div>
+        ))}
       </section>
 
       <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm">

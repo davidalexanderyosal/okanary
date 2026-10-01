@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app";
 import { currentMonthSgt } from "../src/month";
 
-const app = createApp();
+const noNet = (async () => { throw new Error("offline"); }) as typeof fetch;
+const app = createApp({ fetch: noNet });
 const call = (path: string, init?: RequestInit) => app.request(path, init, env as never);
 const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body), headers: { "content-type": "application/json" } });
 
@@ -42,8 +43,8 @@ describe("API", () => {
     expect((await call("/api/transactions", json("POST", { amount_minor: 0 }))).status).toBe(400);
   });
 
-  it("non-SGD needs amount_sgd_minor (D-08)", async () => {
-    expect((await call("/api/transactions", json("POST", { amount_minor: 1200, currency: "JPY" }))).status).toBe(400);
+  it("non-SGD with no obtainable FX rate needs a manual amount_sgd_minor", async () => {
+    expect((await call("/api/transactions", json("POST", { amount_minor: 1200, currency: "JPY" }))).status).toBe(422);
     const r = await call("/api/transactions", json("POST", { amount_minor: 1200, currency: "JPY", amount_sgd_minor: 1068 }));
     expect(r.status).toBe(201);
     expect((await r.json<{ fx_source: string }>()).fx_source).toBe("manual");

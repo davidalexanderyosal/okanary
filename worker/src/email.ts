@@ -1,5 +1,6 @@
 import PostalMime from "postal-mime";
 import type { Transaction } from "@okanary/core";
+import { runAlertsInBackground } from "./alerts";
 import { captureTransaction, pushPurchaseNudge } from "./capture";
 import type { Deps } from "./deps";
 import { bankForDomain, dkimPass } from "./email-auth";
@@ -98,6 +99,7 @@ export async function handleEmail(message: InboundEmail, env: Env, deps: Deps, c
       const push = pushPurchaseNudge(env, deps, res.txn).catch(() => undefined);
       if (ctx) ctx.waitUntil(push); else await push;
     }
+    await runAlertsInBackground(env, deps, ctx);
     return { action: "captured", transactionId: res.txn.id, merged: res.merged, status: res.txn.status, via };
   } catch (err) {
     console.error("email handler error", err instanceof Error ? err.message : String(err)); // message only: never bodies/headers

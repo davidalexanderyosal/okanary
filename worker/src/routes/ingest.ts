@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { parseShortcutAmount } from "@okanary/core";
+import { runAlertsInBackground } from "../alerts";
 import { captureTransaction, pushPurchaseNudge } from "../capture";
 import type { AppEnv } from "../env";
 import { getSetting } from "../settings";
@@ -108,5 +109,8 @@ ingest.post("/applepay", async (c) => {
     const push = pushPurchaseNudge(c.env, deps, t).catch(() => undefined);
     try { c.executionCtx.waitUntil(push); } catch { await push; }
   }
+  let ctx: { waitUntil(p: Promise<unknown>): void } | undefined;
+  try { ctx = c.executionCtx; } catch { /* tests */ }
+  await runAlertsInBackground(c.env, deps, ctx);
   return c.json({ id: t.id, status: t.status, category_id: t.category_id, category_source: t.category_source, merchant: t.merchant, merged: res.merged }, res.merged ? 200 : 201);
 });

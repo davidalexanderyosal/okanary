@@ -29,7 +29,18 @@ Branch: `claude/okanary-phases-0-5`. All work is local only (nothing deployed, n
 - Verified: 63 worker tests (parsers per fixture, handler routing/trust, merge in both arrival orders, no double counting, cron), 84 core tests; `wrangler dev` local email endpoint: Apple Pay tap S$14.49 + DBS email S$14.50 → ONE confirmed transaction (S$14.50, Apple Pay time), forged email ignored, month total not double counted.
 - Bug found by tests and fixed: D1 `LIKE` pattern >50 bytes (D-27).
 
+## Phase 4 — Budgets, pace and alerts: DONE
+- Budgets screen (per spend group and per category, copy last month, progress bars with pace marker); `budgets` API with `effective_from` inheritance.
+- Home: Lifestyle `spent / budget`, pace bar + marker, "Ahead of / On / Under pace", "Safe to spend today: S$x" (core `pace.ts`).
+- Threshold pushes at 50/80/100% (configurable) via `alert_log` (migration 0003 unique index → once per budget/month/threshold, race-free); post-purchase push now shows `Lifestyle S$x / S$budget (day d/n)`.
+- Card-cycle view per card (since last statement, next statement, due date, last statement total; bill estimate vs spend); full Reports: Overview donut + category bars, Daily bars + cumulative vs pace line, Top merchants, 6-month Lifestyle trend, Cards.
+- Multi-currency: currency picker in Quick add (keypad follows the currency's decimals, live SGD estimate, trip currency suggestion), automatic ECB conversion + `fx_rates` cache + hourly FX refresh, trips (CRUD in Settings, auto-tagging by date).
+- Verified: core 97 tests (pace/safe-to-spend/thresholds/cycle dates/bill), worker 84 tests (budgets, alerts incl. once-per-period + race + spend-definition + jump-over-thresholds, FX, trips, cycles, trend); `wrangler dev` demo: Lifestyle crossing 50% then 80% of a S$900 budget wrote exactly one `alert_log` row each and nothing on further small spends.
+- Not verifiable here: real push delivery, live Frankfurter rates (sandbox blocks them), iPhone rendering of charts.
+
 ## Needs you (cumulative)
+- Decide your monthly budgets in the app (spec §10.7: last month's actual minus 10–15% is a good first Lifestyle value).
+- Set each credit card's statement day and due day (Settings → Accounts) to light up the card-cycle view.
 - **Real emails (spec §10.1):** save 3–5 redacted DBS alert emails (incl. one foreign-currency) and any Citi ones into `worker/fixtures/` as `dbs-*.txt`/`citi-*.txt`; the parsers must be checked/adjusted against them. Until then treat DBS/Citi parsing as unproven (the AI fallback and Review inbox are the safety net).
 - **First real forwarded email:** confirm Cloudflare reports `dkim=pass header.d=dbs.com` in Authentication-Results (else every alert is forwarded as "untrusted"); adjust `email-auth.ts` if not.
 - DBS digibank: lower the alert threshold and enable email delivery; check Citi Mobile alert preferences (spec §10.2–3).

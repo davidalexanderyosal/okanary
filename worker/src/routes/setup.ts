@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { parseThresholds } from "@okanary/core";
 import type { AppEnv } from "../env";
 import { pushConfigured, sendPushToAll } from "../push";
 import { effectiveIngestToken } from "./ingest";
@@ -22,6 +23,7 @@ setup.get("/setup", async (c) => {
   const emailStatus = Object.fromEntries(mail.map((m) => [m.source.slice(6), { last_at: m.t, failed: m.failed }]));
   return c.json({
     email: { forward_configured: !!c.env.FORWARD_TO, banks: emailStatus },
+    alerts: { thresholds: parseThresholds(await getSetting(c.env.DB, "alert_thresholds")) },
     ingest_path: "/api/ingest/applepay",
     token,
     last_applepay_at: last?.received_at ?? null,
@@ -37,9 +39,10 @@ setup.post("/setup/token", async (c) => {
 });
 
 setup.put("/settings", async (c) => {
-  const p = z.object({ push_post_purchase: z.boolean().optional() }).safeParse(await c.req.json().catch(() => null));
+  const p = z.object({ push_post_purchase: z.boolean().optional(), alert_thresholds: z.array(z.number().int().min(1).max(200)).max(6).optional() }).safeParse(await c.req.json().catch(() => null));
   if (!p.success) return c.json({ error: p.error.flatten() }, 400);
   if (p.data.push_post_purchase !== undefined) await setSetting(c.env.DB, "push_post_purchase", p.data.push_post_purchase ? "1" : "0");
+  if (p.data.alert_thresholds) await setSetting(c.env.DB, "alert_thresholds", parseThresholds(p.data.alert_thresholds.join(",")).join(","));
   return c.json({ ok: true });
 });
 

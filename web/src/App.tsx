@@ -4,6 +4,7 @@ import { QuickAdd } from "./components/QuickAdd";
 import { ToastProvider } from "./components/Toast";
 import { useRefData } from "./lib/refdata";
 import { Home } from "./pages/Home";
+import { Budgets } from "./pages/Budgets";
 import { Raw } from "./pages/Raw";
 import { Review } from "./pages/Review";
 import { Settings } from "./pages/Settings";
@@ -15,6 +16,7 @@ const Reports = lazy(() => import("./pages/Reports").then((m) => ({ default: m.R
 const tabs = [
   { to: "/", label: "Home", icon: "◉" },
   { to: "/transactions", label: "Activity", icon: "☰" },
+  { to: "/budgets", label: "Budgets", icon: "◧" },
   { to: "/reports", label: "Reports", icon: "◔" },
   { to: "/settings", label: "Settings", icon: "⚙" },
 ];
@@ -33,6 +35,7 @@ function Shell() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/transactions" element={<Transactions />} />
+          <Route path="/budgets" element={<Budgets />} />
           <Route path="/reports" element={<Suspense fallback={null}><Reports /></Suspense>} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/setup" element={<Setup />} />

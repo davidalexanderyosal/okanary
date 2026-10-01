@@ -113,6 +113,17 @@ export function Setup() {
           <button disabled={!s?.push.configured || state !== "on"} onClick={() => void api.pushTest().then((r) => toast({ msg: r.delivered ? "Test sent" : "Nothing delivered" }))}
             className="tap rounded-xl border border-line px-4 disabled:opacity-40">Send test</button>
         </div>
+        <p className="pb-1 pt-4 text-sm font-semibold">Budget alerts</p>
+        <p className="pb-2 text-xs text-muted">A notification when a budget reaches these percentages (once per month each).</p>
+        <div className="flex flex-wrap gap-2">
+          {[25, 50, 75, 80, 90, 100].map((t) => {
+            const on = (s?.alerts.thresholds ?? []).includes(t);
+            return (
+              <button key={t} aria-pressed={on} onClick={() => { const cur = new Set(s?.alerts.thresholds ?? []); on ? cur.delete(t) : cur.add(t); void api.putSettings({ alert_thresholds: [...cur].sort((a, b) => a - b) }).then(invalidateAll); }}
+                className={`tap rounded-full border px-4 text-sm ${on ? "border-accent bg-accent text-accent-fg" : "border-line bg-bg"}`}>{t}%</button>
+            );
+          })}
+        </div>
         <label className="tap mt-3 flex items-center gap-3 text-sm">
           <input type="checkbox" className="h-5 w-5" checked={s?.push.post_purchase ?? true} onChange={(e) => void api.putSettings({ push_post_purchase: e.target.checked }).then(invalidateAll)} />
           Notify after each auto-captured purchase

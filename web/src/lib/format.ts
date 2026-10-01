@@ -30,3 +30,9 @@ export function prettyMerchant(m: string | null | undefined): string {
   if (!m) return "";
   return m.toLowerCase().replace(/(^|[\s/&-])([a-z])/g, (_, a: string, b: string) => a + b.toUpperCase());
 }
+
+/** '2026-09-12' -> '12 Sep' */
+export function shortDate(ymd: string): string {
+  const [, m, d] = ymd.split("-");
+  return `${+d!} ${MONTHS[+m! - 1]}`;
+}

@@ -6,6 +6,7 @@ export interface SummaryRow extends SpendRow {
   occurred_at: string;
   category_id: string | null;
   group_id: string | null;
+  merchant?: string | null;
 }
 
 export const UNCATEGORISED = "uncategorised";
@@ -40,6 +41,8 @@ export function summarizeMonth(rows: SummaryRow[], month: string, now: string | 
   const nonSpend = new Map<string, BucketTotal>();
   const cats = new Map<string, BucketTotal>();
   const daily = Array.from({ length: dim }, () => 0);
+  const dailyByGroup: Record<string, number[]> = {};
+  const merchants = new Map<string, BucketTotal>();
   let needsReview = 0;
   let pending = 0;
 
@@ -58,7 +61,10 @@ export function summarizeMonth(rows: SummaryRow[], month: string, now: string | 
     total += amt;
     bump(groups, r.group_id ?? UNCATEGORISED, amt);
     bump(cats, r.category_id ?? UNCATEGORISED, amt);
-    daily[sgtParts(r.occurred_at).day - 1]! += amt;
+    const dayIdx = sgtParts(r.occurred_at).day - 1;
+    daily[dayIdx]! += amt;
+    (dailyByGroup[r.group_id ?? UNCATEGORISED] ??= Array.from({ length: dim }, () => 0))[dayIdx]! += amt;
+    if (r.merchant) bump(merchants, r.merchant, amt);
     if (r.status === "needs_review") needsReview++;
     if (r.status === "pending") pending++;
   }
@@ -66,6 +72,23 @@ export function summarizeMonth(rows: SummaryRow[], month: string, now: string | 
   return {
     month, total, totalLastMonthToDate: prevTotal,
     byGroup: [...groups.values()], byGroupNonSpend: [...nonSpend.values()], byCategory: [...cats.values()].sort((a, b) => b.spent - a.spent),
-    daily, needsReviewCount: needsReview, pendingCount: pending, daysInMonth: dim, day,
+    daily, dailyByGroup, topMerchants: [...merchants.values()].sort((a, b) => b.spent - a.spent).slice(0, 10), needsReviewCount: needsReview, pendingCount: pending, daysInMonth: dim, day,
   };
+}
+
+/** Groups whose charges never appear on a card bill. Their ids are the seeded ones. */
+const NOT_ON_BILL = new Set(["income", "transfers"]);
+
+/**
+ * What a card statement will actually add up to: every non-void charge on the card (refunds negative), including purchases
+ * that the spend definition deliberately leaves out (excluded / reimbursable / Savings). Card payments and income aren't charges.
+ * Differs from the spend total on purpose (D-31): the bill is a different question from "how much did I spend".
+ */
+export function billEstimate(rows: SummaryRow[]): number {
+  let t = 0;
+  for (const r of rows) {
+    if (r.status === "void" || (r.group_id && NOT_ON_BILL.has(r.group_id))) continue;
+    t += signedSgdMinor(r);
+  }
+  return t;
 }

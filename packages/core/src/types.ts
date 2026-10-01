@@ -33,6 +33,10 @@ export interface MonthSummary {
   byCategory: BucketTotal[];
   /** Spend per SGT day: index 0 = day 1. */
   daily: number[];
+  /** Same, split by category group id (or 'uncategorised'). */
+  dailyByGroup: Record<string, number[]>;
+  /** Top merchants by spend this month (normalised names), max 10. */
+  topMerchants: BucketTotal[];
   needsReviewCount: number;
   pendingCount: number;
   daysInMonth: number;

@@ -8,3 +8,5 @@ export * from "./merchant";
 export * from "./rules";
 export * from "./nudge";
 export * from "./dedup";
+export * from "./pace";
+export * from "./cycle";

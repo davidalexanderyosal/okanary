@@ -58,6 +58,8 @@ export function minorToDecimalString(minor: number, currency: string): string {
 
 const SYMBOLS: Record<string, string> = { SGD: "S$", USD: "US$", JPY: "¥", IDR: "Rp", EUR: "€", GBP: "£", KRW: "₩", AUD: "A$", MYR: "RM", THB: "฿" };
 
+export const currencySymbol = (currency: string): string => SYMBOLS[currency.toUpperCase()] ?? currency.toUpperCase() + " ";
+
 function groupThousands(intPart: string): string {
   return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }

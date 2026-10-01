@@ -1,4 +1,4 @@
-import { addMonths, monthRangeUtc, summarizeMonth, type MonthSummary, type SummaryRow, type Transaction } from "@okanary/core";
+import { addMonths, monthRangeUtc, resolveBudgets, summarizeMonth, type BudgetRow, type MonthSummary, type SummaryRow, type Transaction } from "@okanary/core";
 
 /** Columns every spend calculation needs: the txn plus its category's group and counts_as_spend. */
 export const TXN_WITH_GROUP_SQL = `
@@ -24,13 +24,23 @@ export async function loadSummaryRows(db: D1Database, month: string): Promise<Su
   return results;
 }
 
-export async function monthSummary(db: D1Database, month: string, now: Date = new Date()): Promise<MonthSummary & { reviewCount: number }> {
+/** Rows for months first..last (inclusive), for multi-month trends. */
+export async function loadRowsBetween(db: D1Database, firstMonth: string, lastMonth: string): Promise<SummaryRow[]> {
+  const { results } = await db
+    .prepare(`${TXN_WITH_GROUP_SQL} WHERE t.occurred_at >= ?1 AND t.occurred_at < ?2`)
+    .bind(monthRangeUtc(firstMonth).start, monthRangeUtc(lastMonth).end)
+    .all<SummaryRow>();
+  return results;
+}
+
+export async function monthSummary(db: D1Database, month: string, now: Date = new Date()): Promise<MonthSummary & { reviewCount: number; budgets: BudgetRow[] }> {
   const rows = await loadSummaryRows(db, month);
   const summary = summarizeMonth(rows, month, now);
   const rc = await db.prepare(`SELECT COUNT(*) AS n FROM transactions t WHERE ${REVIEW_WHERE}`).first<{ n: number }>();
   const failed = await db.prepare(`SELECT COUNT(*) AS n FROM raw_ingest WHERE parse_status = 'failed' AND transaction_id IS NULL`).first<{ n: number }>();
   const dups = await db.prepare(`SELECT COUNT(*) AS n FROM duplicate_candidates WHERE resolved = 0`).first<{ n: number }>();
-  return { ...summary, reviewCount: (rc?.n ?? 0) + (failed?.n ?? 0) + (dups?.n ?? 0) };
+  const budgets = resolveBudgets((await db.prepare("SELECT scope, ref_id, monthly_amount_sgd_minor, effective_from FROM budgets").all<BudgetRow>()).results, month);
+  return { ...summary, reviewCount: (rc?.n ?? 0) + (failed?.n ?? 0) + (dups?.n ?? 0), budgets };
 }
 
 export async function getTransaction(db: D1Database, id: string): Promise<Transaction | null> {

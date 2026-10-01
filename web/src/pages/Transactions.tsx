@@ -9,8 +9,8 @@ import { useRefData } from "../lib/refdata";
 import { EditTxnSheet } from "../components/EditTxnSheet";
 import { TxnRow } from "../components/TxnRow";
 
-export function MonthStepper({ month, onChange }: { month: string; onChange: (m: string) => void }) {
-  const cur = currentMonth();
+export function MonthStepper({ month, onChange, allowFuture = false }: { month: string; onChange: (m: string) => void; allowFuture?: boolean }) {
+  const cur = allowFuture ? addMonths(currentMonth(), 1) : currentMonth();
   return (
     <div className="flex items-center justify-between">
       <button className="tap text-2xl" aria-label="Previous month" onClick={() => onChange(addMonths(month, -1))}>‹</button>

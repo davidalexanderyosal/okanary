@@ -41,11 +41,15 @@ export function EditTxnSheet({ txn, onClose, groups, categories, accounts }: {
     setBusy(true);
     try {
       const amount_minor = parseMajorToMinor(amount, txn.currency);
+      // Foreign amounts: a typed SGD value is "manual"; changing only the original amount lets the server re-convert at the ECB rate;
+      // changing neither must not flip an ECB rate to manual.
+      const sgdChanged = foreign && sgdAmount !== minorToDecimalString(txn.amount_sgd_minor, "SGD");
+      const amountChanged = amount_minor !== txn.amount_minor;
       await api.patchTxn(txn.id, {
-        amount_minor, merchant: merchant.trim() || null, category_id: cat || null, account_id: acct || null,
+        ...(amountChanged || !foreign ? { amount_minor } : {}), merchant: merchant.trim() || null, category_id: cat || null, account_id: acct || null,
         occurred_at: sgtLocalToUtc(date, time || "00:00"), note: note.trim() || null,
         is_refund: refund, is_reimbursable: reimb, is_excluded: excl,
-        ...(foreign ? { amount_sgd_minor: parseMajorToMinor(sgdAmount, "SGD") } : {}),
+        ...(sgdChanged ? { amount_sgd_minor: parseMajorToMinor(sgdAmount, "SGD") } : {}),
       });
       invalidateAll();
       onClose();
@@ -72,7 +76,7 @@ export function EditTxnSheet({ txn, onClose, groups, categories, accounts }: {
           <input inputMode="decimal" className={field} value={amount} onChange={(e) => setAmount(e.target.value)} />
         </label>
         {foreign && (
-          <label className="block text-xs text-muted">Amount in SGD
+          <label className="block text-xs text-muted">Amount in SGD{txn.fx_source === "ecb" ? " (≈ ECB estimate until your statement)" : txn.fx_source === "bank" ? " (from your bank)" : ""}
             <input inputMode="decimal" className={field} value={sgdAmount} onChange={(e) => setSgdAmount(e.target.value)} />
           </label>
         )}

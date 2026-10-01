@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { paceFor, safeToSpendToday } from "@okanary/core";
 import { api, type TxnRowData } from "../lib/api";
 import { useResource } from "../lib/data";
 import { monthLabel, sgd } from "../lib/format";
@@ -7,6 +8,7 @@ import { useRefData } from "../lib/refdata";
 import { currentMonth } from "../lib/month";
 import { EditTxnSheet } from "../components/EditTxnSheet";
 import { groupColor } from "../components/groups";
+import { PaceBar, paceText, paceTextColor } from "../components/PaceBar";
 import { TxnRow } from "../components/TxnRow";
 
 export function Home() {
@@ -26,6 +28,9 @@ export function Home() {
   if (summary.error && !s) return <p className="p-6 text-danger">Couldn't load: {summary.error}</p>;
   const delta = s ? s.total - s.totalLastMonthToDate : 0;
   const barMax = Math.max(g.essentials, g.lifestyle, g.savings, 1);
+  const lifeBudget = s?.budgets.find((b) => b.scope === "group" && b.ref_id === "lifestyle")?.monthly_amount_sgd_minor ?? 0;
+  const pace = s && lifeBudget > 0 ? paceFor(g.lifestyle, lifeBudget, s.day, s.daysInMonth) : null;
+  const safe = s && lifeBudget > 0 ? safeToSpendToday(lifeBudget, g.lifestyle, s.daysInMonth - s.day + 1) : null;
   const lifestyleShare = s && s.total > 0 ? Math.round((g.lifestyle * 100) / s.total) : 0;
 
   return (
@@ -47,16 +52,28 @@ export function Home() {
         </Link>
       )}
 
-      <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm" aria-label="Lifestyle">
+      <Link to="/budgets" className="mt-4 block rounded-3xl bg-card p-4 shadow-sm active:bg-line/40" aria-label="Lifestyle">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-semibold" style={{ color: "var(--lifestyle)" }}>Lifestyle</h2>
-          <span className="text-xs text-muted">{lifestyleShare}% of spend</span>
+          {pace ? <span className={`text-xs font-medium ${paceTextColor[pace.state]}`}>{paceText[pace.state]}</span> : <span className="text-xs text-muted">{lifestyleShare}% of spend</span>}
         </div>
-        <p className="num mt-1 text-3xl font-bold">{sgd(g.lifestyle)}</p>
-        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={lifestyleShare} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full" style={{ width: `${Math.min(100, lifestyleShare)}%`, background: "var(--lifestyle)" }} />
-        </div>
-      </section>
+        <p className="num mt-1 text-3xl font-bold">
+          {sgd(g.lifestyle)}
+          {pace && <span className="text-base font-medium text-muted"> / {sgd(lifeBudget)}</span>}
+        </p>
+        {pace && safe ? (
+          <>
+            <PaceBar pace={pace} color="var(--lifestyle)" />
+            <p className="mt-3 text-sm">
+              {safe.exceeded
+                ? <span className="font-semibold text-danger">Over budget by {sgd(-safe.remaining)}</span>
+                : <>Safe to spend today: <b className="num">{sgd(safe.perDay)}</b> <span className="text-muted">({sgd(safe.remaining)} over {safe.daysLeft} days)</span></>}
+            </p>
+          </>
+        ) : (
+          <p className="mt-3 text-sm text-accent">Set a Lifestyle budget to see pace and safe-to-spend ›</p>
+        )}
+      </Link>
 
       <section className="mt-3 space-y-2.5 rounded-3xl bg-card p-4 shadow-sm" aria-label="Groups">
         {([["essentials", "Essentials", g.essentials], ["lifestyle", "Lifestyle", g.lifestyle], ["savings", "Savings", g.savings]] as const).map(([id, name, v]) => (

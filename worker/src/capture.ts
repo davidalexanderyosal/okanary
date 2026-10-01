@@ -6,6 +6,7 @@ import type { Env } from "./env";
 import { getSgdRate } from "./fx";
 import { sendPushToAll } from "./push";
 import { getSetting } from "./settings";
+import { tripCovering } from "./trips";
 import { nowIso, ulid } from "./util";
 
 export interface CaptureInput {
@@ -82,13 +83,14 @@ export async function captureTransaction(env: Env, deps: Deps, input: CaptureInp
 
   const id = ulid();
   const now = nowIso();
+  const tripId = (await tripCovering(env.DB, input.occurred_at))?.id ?? null;
   await env.DB.prepare(
     `INSERT INTO transactions (id, occurred_at, account_id, amount_minor, currency, amount_sgd_minor, fx_rate, fx_source,
-       merchant_raw, merchant, category_id, category_source, status, source, is_refund, is_reimbursable, is_excluded, note, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,?,?,?,?)`,
+       merchant_raw, merchant, category_id, category_source, status, source, is_refund, is_reimbursable, is_excluded, note, trip_id, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,?,?,?,?,?)`,
   )
     .bind(id, input.occurred_at, input.account_id, input.amount_minor, input.currency, money.sgd, money.fxRate, money.fxSource,
-      input.merchant_raw || null, merchant || null, cat.category_id, cat.source, money.status, input.source, cat.set_excluded ? 1 : 0, money.note, now, now)
+      input.merchant_raw || null, merchant || null, cat.category_id, cat.source, money.status, input.source, cat.set_excluded ? 1 : 0, money.note, tripId, now, now)
     .run();
   if (input.raw_id) await env.DB.prepare("UPDATE raw_ingest SET transaction_id = ?, parse_status = 'ok' WHERE id = ?").bind(id, input.raw_id).run();
 
