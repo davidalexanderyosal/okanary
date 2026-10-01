@@ -87,6 +87,21 @@ export function Setup() {
       </section>
 
       <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm">
+        <h2 className="pb-2 text-sm font-semibold text-muted">Bank alert emails</h2>
+        {(["dbs", "citi"] as const).map((b) => {
+          const st = s?.email.banks[b];
+          return (
+            <p key={b} className="flex justify-between py-1 text-sm">
+              <span className="font-medium">{b.toUpperCase()}</span>
+              <span className={st ? "" : "text-muted"}>{st ? `last email ${new Date(st.last_at).toLocaleString()}${st.failed ? ` · ${st.failed} unreadable` : ""}` : "none received yet"}</span>
+            </p>
+          );
+        })}
+        {s && !s.email.forward_configured && <p className="pt-1 text-xs text-muted">Set the <code>FORWARD_TO</code> variable so Gmail's forwarding-verification mail reaches you (see README).</p>}
+        <Link to="/raw" className="tap mt-1 flex items-center justify-between text-sm font-medium text-accent"><span>Captured emails &amp; raw log</span><span>›</span></Link>
+      </section>
+
+      <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm">
         <h2 className="pb-2 text-sm font-semibold text-muted">Notifications</h2>
         {state === "needs-install" && <p className="pb-2 text-sm">On iPhone, notifications only work after <b>Add to Home Screen</b> (Safari → Share). Open Okanary from the Home Screen icon, then come back here.</p>}
         {state === "unsupported" && <p className="pb-2 text-sm text-muted">This browser doesn't support push notifications.</p>}

@@ -1,0 +1,22 @@
+Return-Path: <ibanking.alert@dbs.com>
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=dbs.com header.s=sel1; spf=pass smtp.mailfrom=dbs.com; dmarc=pass
+From: DBS iBanking <ibanking.alert@dbs.com>
+To: owner@example.com
+Subject: Card Transaction Alert
+Date: Wed, 14 Oct 2026 12:12:05 +0800
+Message-ID: <synthetic-dbs-sgd-1@dbs.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Dear Sir/Madam,
+
+We refer to your card transaction request dated 14 Oct 2026.
+
+Transaction Ref: 0000000001
+Date & Time: 14 Oct 12:10 (SGT)
+Amount: SGD14.50
+From: DBS/POSB card ending 1234
+To: YA KUN KAYA TOAST
+
+If unauthorised, call us immediately.
+SYNTHETIC FIXTURE: invented for tests, not a real DBS email.

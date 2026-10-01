@@ -7,3 +7,4 @@ export * from "./parse-amount";
 export * from "./merchant";
 export * from "./rules";
 export * from "./nudge";
+export * from "./dedup";

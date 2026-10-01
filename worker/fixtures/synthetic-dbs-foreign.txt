@@ -1,0 +1,16 @@
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=dbs.com header.s=sel1; spf=pass smtp.mailfrom=dbs.com; dmarc=pass
+From: DBS iBanking <ibanking.alert@dbs.com>
+To: owner@example.com
+Subject: Card Transaction Alert
+Date: Thu, 15 Oct 2026 20:31:44 +0800
+Message-ID: <synthetic-dbs-foreign-1@dbs.com>
+Content-Type: text/plain; charset=utf-8
+
+Dear Sir/Madam,
+
+Date & Time: 15 Oct 20:30 (SGT)
+Amount: JPY1,200
+From: DBS/POSB card ending 1234
+To: LAWSON SHIBUYA
+
+SYNTHETIC FIXTURE: invented for tests, not a real DBS email.

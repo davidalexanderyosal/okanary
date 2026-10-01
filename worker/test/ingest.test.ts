@@ -10,7 +10,7 @@ const TOKEN = "test-token-123";
 interface Captured { url: string; init: RequestInit }
 function setup(over: Partial<Deps> & { vapid?: boolean } = {}) {
   const calls: Captured[] = [];
-  const e = { ...env, INGEST_TOKEN: TOKEN } as typeof env;
+  const e = { ...env, INGEST_TOKEN: TOKEN } as unknown as import("../src/env").Env;
   if (over.vapid) Object.assign(e, { VAPID_SUBJECT: "mailto:me@example.com", VAPID_PUBLIC_KEY: VAPID.pub, VAPID_PRIVATE_KEY: VAPID.priv });
   const fetchFn = over.fetch ?? (async (url: RequestInfo | URL, init?: RequestInit) => { calls.push({ url: String(url), init: init ?? {} }); return new Response("{}", { status: 201 }); });
   const app = createApp({ now: () => NOW, ...over, fetch: fetchFn as typeof fetch });

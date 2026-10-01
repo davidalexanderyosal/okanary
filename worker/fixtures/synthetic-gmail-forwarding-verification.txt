@@ -1,0 +1,11 @@
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=google.com; spf=pass
+From: Gmail Team <forwarding-noreply@google.com>
+To: spend@example.com
+Subject: Gmail Forwarding Confirmation - Receive Mail from owner@gmail.com
+Date: Mon, 12 Oct 2026 10:00:00 +0800
+Message-ID: <synthetic-verify-1@google.com>
+Content-Type: text/plain; charset=utf-8
+
+owner@gmail.com has requested to automatically forward mail to your email address spend@example.com.
+Confirmation code: 123456789
+SYNTHETIC FIXTURE.

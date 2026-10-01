@@ -18,7 +18,10 @@ setup.get("/setup", async (c) => {
   const [token, post] = await Promise.all([effectiveIngestToken(c.env.DB, c.env.INGEST_TOKEN), getSetting(c.env.DB, "push_post_purchase")]);
   const subs = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").first<{ n: number }>();
   const last = await c.env.DB.prepare("SELECT received_at FROM raw_ingest WHERE source = 'applepay' ORDER BY received_at DESC LIMIT 1").first<{ received_at: string }>();
+  const mail = (await c.env.DB.prepare("SELECT source, MAX(received_at) AS t, SUM(parse_status = 'failed') AS failed FROM raw_ingest WHERE source LIKE 'email:%' GROUP BY source").all<{ source: string; t: string; failed: number }>()).results;
+  const emailStatus = Object.fromEntries(mail.map((m) => [m.source.slice(6), { last_at: m.t, failed: m.failed }]));
   return c.json({
+    email: { forward_configured: !!c.env.FORWARD_TO, banks: emailStatus },
     ingest_path: "/api/ingest/applepay",
     token,
     last_applepay_at: last?.received_at ?? null,

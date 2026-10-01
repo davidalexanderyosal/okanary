@@ -1,0 +1,13 @@
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=citibank.com.sg header.s=sel; spf=pass
+From: Citi Alerts <alerts@citibank.com.sg>
+To: owner@example.com
+Subject: Citi Alert: Card Transaction
+Date: Wed, 14 Oct 2026 19:06:00 +0800
+Message-ID: <synthetic-citi-sgd-1@citibank.com.sg>
+Content-Type: text/plain; charset=utf-8
+
+Dear Customer,
+
+A transaction of SGD 28.90 was made with your Citi Rewards card ending 4321 on 14/10/2026 at 19:05 at GRAB*A-3JKD92 SINGAPORE SG.
+
+SYNTHETIC FIXTURE: invented for tests, not a real Citi email.

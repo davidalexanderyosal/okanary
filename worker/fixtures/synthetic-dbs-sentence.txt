@@ -1,0 +1,13 @@
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=dbs.com.sg header.s=sel1; spf=pass smtp.mailfrom=dbs.com; dmarc=pass
+From: DBS Alerts <alerts@dbs.com.sg>
+To: owner@example.com
+Subject: Transaction alert on your card
+Date: Fri, 16 Oct 2026 09:05:00 +0800
+Message-ID: <synthetic-dbs-sentence-1@dbs.com.sg>
+Content-Type: text/plain; charset=utf-8
+
+Hi,
+
+A transaction of SGD 8.90 was made with your DBS card ending 1234 on 16 Oct 2026 09:03 (SGT) at TOAST BOX.
+
+SYNTHETIC FIXTURE: invented for tests, not a real DBS email.

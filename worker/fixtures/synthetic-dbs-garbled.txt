@@ -1,0 +1,10 @@
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=dbs.com header.s=sel1; spf=pass smtp.mailfrom=dbs.com; dmarc=pass
+From: DBS iBanking <ibanking.alert@dbs.com>
+To: owner@example.com
+Subject: Card Transaction Alert
+Date: Sun, 18 Oct 2026 12:15:00 +0800
+Message-ID: <synthetic-dbs-garbled-1@dbs.com>
+Content-Type: text/plain; charset=utf-8
+
+Heads up! You just spent fourteen fifty at Ya Kun with the card whose last digits are 1234, around lunch time.
+SYNTHETIC FIXTURE: a layout the regex parser can't read (exercises the LLM fallback).

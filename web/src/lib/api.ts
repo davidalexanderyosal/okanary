@@ -23,7 +23,10 @@ export interface NewTxn {
 
 export interface RuleRow { id: string; match_type: string; pattern: string; category_id: string | null; category_name: string | null; set_excluded: number; priority: number; hits: number }
 export interface FailedRaw { id: string; source: string; received_at: string; payload: string | null; error: string | null }
+export interface DuplicateCard { id: string; txn: TxnRowData; other: TxnRowData }
+export interface RawRow { id: string; source: string; received_at: string; parse_status: string | null; error: string | null; transaction_id: string | null; preview: string | null }
 export interface SetupInfo {
+  email: { forward_configured: boolean; banks: Record<string, { last_at: string; failed: number }> };
   ingest_path: string; token: string | null; last_applepay_at: string | null;
   push: { configured: boolean; public_key: string | null; subscriptions: number; post_purchase: boolean };
 }
@@ -46,7 +49,11 @@ export const api = {
   patchCategory: (id: string, c: Partial<Category>) => req<Category>(`/api/categories/${id}`, body("PATCH", c)),
 
   transaction: (id: string) => req<TxnRowData>(`/api/transactions/${id}`),
-  review: () => req<{ items: TxnRowData[]; failed: FailedRaw[] }>("/api/review"),
+  review: () => req<{ items: TxnRowData[]; failed: FailedRaw[]; duplicates: DuplicateCard[] }>("/api/review"),
+  mergeDuplicate: (id: string) => req<Transaction>(`/api/duplicates/${id}/merge`, { method: "POST" }),
+  dismissDuplicate: (id: string) => req<{ ok: true }>(`/api/duplicates/${id}/dismiss`, { method: "POST" }),
+  rawList: () => req<RawRow[]>("/api/raw-ingest?limit=100"),
+  rawGet: (id: string) => req<{ id: string; payload: string | null; error: string | null }>(`/api/raw-ingest/${id}`),
   dismissRaw: (id: string) => req<{ ok: true }>(`/api/raw-ingest/${id}/dismiss`, { method: "POST" }),
   rules: () => req<RuleRow[]>("/api/rules"),
   createRule: (r: { pattern: string; category_id: string | null; match_type?: string; set_excluded?: boolean }) => req<RuleRow>("/api/rules", body("POST", r)),

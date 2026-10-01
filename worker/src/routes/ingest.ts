@@ -97,12 +97,16 @@ ingest.post("/applepay", async (c) => {
     if (!Number.isNaN(ms) && Math.abs(ms - now.getTime()) < 36 * 3600_000) occurred = new Date(ms).toISOString();
   }
 
-  const t = await captureTransaction(c.env, deps, {
+  const res = await captureTransaction(c.env, deps, {
     source: "applepay", occurred_at: occurred, amount_minor: amt.amount_minor, currency: amt.currency,
     merchant_raw: body.merchant, account_id: await matchAccount(c.env.DB, body.card), status: "pending", raw_id: rawId,
   });
 
-  const push = pushPurchaseNudge(c.env, deps, t).catch(() => undefined);
-  try { c.executionCtx.waitUntil(push); } catch { await push; }
-  return c.json({ id: t.id, status: t.status, category_id: t.category_id, category_source: t.category_source, merchant: t.merchant }, 201);
+  const t = res.txn;
+  if (!res.merged) {
+    // a merge into an existing (email) record was already notified when that one arrived
+    const push = pushPurchaseNudge(c.env, deps, t).catch(() => undefined);
+    try { c.executionCtx.waitUntil(push); } catch { await push; }
+  }
+  return c.json({ id: t.id, status: t.status, category_id: t.category_id, category_source: t.category_source, merchant: t.merchant, merged: res.merged }, res.merged ? 200 : 201);
 });

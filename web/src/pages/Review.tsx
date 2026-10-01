@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { formatMoney, type Category } from "@okanary/core";
-import { api, type FailedRaw, type TxnRowData } from "../lib/api";
+import { api, type DuplicateCard, type FailedRaw, type TxnRowData } from "../lib/api";
 import { chipOrder } from "../lib/chips";
 import { invalidateAll, useResource } from "../lib/data";
 import { dayLabel, prettyMerchant, timeLabel } from "../lib/format";
@@ -63,6 +63,29 @@ function FailedCard({ f }: { f: FailedRaw }) {
   );
 }
 
+function DuplicateCardView({ d, today }: { d: DuplicateCard; today: string }) {
+  const toast = useToast();
+  const side = (t: TxnRowData) => (
+    <div className="min-w-0 flex-1 rounded-2xl bg-bg p-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{t.source === "applepay" ? "Apple Pay" : t.source === "email" ? "Bank email" : t.source}</p>
+      <p className="truncate text-sm font-medium">{prettyMerchant(t.merchant)}</p>
+      <p className="num text-base font-bold">{formatMoney(t.amount_minor, t.currency)}</p>
+      <p className="text-xs text-muted">{dayLabel(t.occurred_at, today)} {timeLabel(t.occurred_at)}</p>
+    </div>
+  );
+  return (
+    <article className="rounded-3xl border border-accent/40 bg-card p-4 shadow-sm">
+      <p className="pb-2 text-sm font-semibold text-accent">Possible duplicate: merge?</p>
+      <div className="flex gap-2">{side(d.other)}{side(d.txn)}</div>
+      <p className="pt-2 text-xs text-muted">Merging keeps one record with the bank's amount and the Apple Pay time.</p>
+      <div className="mt-2 flex gap-2">
+        <button className="tap flex-1 rounded-xl bg-accent font-semibold text-accent-fg" onClick={() => void api.mergeDuplicate(d.id).then(() => { invalidateAll(); toast({ msg: "Merged into one transaction" }); })}>Merge</button>
+        <button className="tap flex-1 rounded-xl border border-line" onClick={() => void api.dismissDuplicate(d.id).then(invalidateAll)}>Not a duplicate</button>
+      </div>
+    </article>
+  );
+}
+
 export function Review() {
   const ref = useRefData();
   const toast = useToast();
@@ -72,6 +95,7 @@ export function Review() {
   const today = sgtDate(new Date());
   const items = data.data?.items ?? [];
   const failed = data.data?.failed ?? [];
+  const duplicates = data.data?.duplicates ?? [];
 
   async function pick(t: TxnRowData, c: Category) {
     await api.patchTxn(t.id, { category_id: c.id });
@@ -89,7 +113,8 @@ export function Review() {
       <h1 className="pb-1 pt-4 text-2xl font-bold">To categorise</h1>
       <p className="pb-3 text-sm text-muted">One tap on a category. Auto-captured items land here until you confirm them.</p>
       <div className="mb-6 space-y-3">
-        {data.data && items.length === 0 && failed.length === 0 && <p className="py-12 text-center text-muted">All caught up ✓</p>}
+        {data.data && items.length === 0 && failed.length === 0 && duplicates.length === 0 && <p className="py-12 text-center text-muted">All caught up ✓</p>}
+        {duplicates.map((d) => <DuplicateCardView key={d.id} d={d} today={today} />)}
         {failed.map((f) => <FailedCard key={f.id} f={f} />)}
         {items.map((t) => <ReviewCard key={t.id} t={t} chips={chips} catName={catName} today={today} onPick={(c) => void pick(t, c)} onExclude={() => void exclude(t)} />)}
       </div>

@@ -4,6 +4,7 @@ import { QuickAdd } from "./components/QuickAdd";
 import { ToastProvider } from "./components/Toast";
 import { useRefData } from "./lib/refdata";
 import { Home } from "./pages/Home";
+import { Raw } from "./pages/Raw";
 import { Review } from "./pages/Review";
 import { Settings } from "./pages/Settings";
 import { Setup } from "./pages/Setup";
@@ -36,6 +37,7 @@ function Shell() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/review" element={<Review />} />
+          <Route path="/raw" element={<Raw />} />
         </Routes>
       </main>
 

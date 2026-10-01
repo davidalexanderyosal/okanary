@@ -29,7 +29,8 @@ export async function monthSummary(db: D1Database, month: string, now: Date = ne
   const summary = summarizeMonth(rows, month, now);
   const rc = await db.prepare(`SELECT COUNT(*) AS n FROM transactions t WHERE ${REVIEW_WHERE}`).first<{ n: number }>();
   const failed = await db.prepare(`SELECT COUNT(*) AS n FROM raw_ingest WHERE parse_status = 'failed' AND transaction_id IS NULL`).first<{ n: number }>();
-  return { ...summary, reviewCount: (rc?.n ?? 0) + (failed?.n ?? 0) };
+  const dups = await db.prepare(`SELECT COUNT(*) AS n FROM duplicate_candidates WHERE resolved = 0`).first<{ n: number }>();
+  return { ...summary, reviewCount: (rc?.n ?? 0) + (failed?.n ?? 0) + (dups?.n ?? 0) };
 }
 
 export async function getTransaction(db: D1Database, id: string): Promise<Transaction | null> {

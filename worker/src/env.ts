@@ -11,5 +11,9 @@ export interface Env {
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
+  /** Verified Email Routing destination (your Gmail): non-alert mail (e.g. Gmail's forwarding verification) is forwarded here. */
+  FORWARD_TO?: string;
+  /** Extra sender domains, e.g. "mail.dbs.com:dbs,example.com:citi". */
+  ALERT_SENDER_DOMAINS?: string;
 }
 export type AppEnv = { Bindings: Env; Variables: { deps: Deps } };

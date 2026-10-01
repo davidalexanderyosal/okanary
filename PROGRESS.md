@@ -21,7 +21,19 @@ Branch: `claude/okanary-phases-0-5`. All work is local only (nothing deployed, n
 - Verified: worker integration tests (27) cover auth, capture, dedupe, rules/history/AI order, FX, push (VAPID header, 410 prune, toggle); `wrangler dev` + curl showed 401 without token, pending txn with normalised merchant, review + summary counting it.
 - Not verifiable here: a real push delivery to an iPhone, a real Shortcut run, live Frankfurter FX (sandbox blocks it; the no-rate path D-13 was exercised instead), live Workers AI (remote-only; a fake was injected).
 
+## Phase 3 — Email capture (DBS, Citi) + dedup: DONE, parsers UNVERIFIED
+- Email Worker (`email()` export): sender allow-list + DKIM-aligned check, forward-through for everything else (incl. Gmail's forwarding verification), `postal-mime` parsing (text or HTML), Message-ID idempotency, raw always stored in `raw_ingest`.
+- Parsers `worker/src/parsers/{dbs,citi}.ts` + Workers AI fallback (`needs_review`) + failed-parse cards. **UNVERIFIED: no real bank emails were available; tests use invented `worker/fixtures/synthetic-*.txt`.** Citi may not send per-transaction email at all (spec §2).
+- Dedup/merge Apple Pay ↔ email (core `dedup.ts`, 30 min / 1% / same card / merchant similarity), auto-merge or "Possible duplicate — merge?" review card (migration 0002); raw capture log page (`/raw`); email status on Setup page.
+- Hourly cron: pending → confirmed after 24 h; "no DBS email in 3 days" alert.
+- Verified: 63 worker tests (parsers per fixture, handler routing/trust, merge in both arrival orders, no double counting, cron), 84 core tests; `wrangler dev` local email endpoint: Apple Pay tap S$14.49 + DBS email S$14.50 → ONE confirmed transaction (S$14.50, Apple Pay time), forged email ignored, month total not double counted.
+- Bug found by tests and fixed: D1 `LIKE` pattern >50 bytes (D-27).
+
 ## Needs you (cumulative)
+- **Real emails (spec §10.1):** save 3–5 redacted DBS alert emails (incl. one foreign-currency) and any Citi ones into `worker/fixtures/` as `dbs-*.txt`/`citi-*.txt`; the parsers must be checked/adjusted against them. Until then treat DBS/Citi parsing as unproven (the AI fallback and Review inbox are the safety net).
+- **First real forwarded email:** confirm Cloudflare reports `dkim=pass header.d=dbs.com` in Authentication-Results (else every alert is forwarded as "untrusted"); adjust `email-auth.ts` if not.
+- DBS digibank: lower the alert threshold and enable email delivery; check Citi Mobile alert preferences (spec §10.2–3).
+- Cloudflare: enable Email Routing on a domain/subdomain, route `spend@<domain>` to this Worker, verify your Gmail as a destination, set `FORWARD_TO` to it; then create the Gmail forwarding filter (spec §10.5).
 - iPhone test of Home-Screen install + Quick add feel (safe areas, keyboard).
 - Secrets for Phase 2: `INGEST_TOKEN` (or generate in the app's Setup page), VAPID keys via `npm run vapid` → `wrangler secret put VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY/VAPID_SUBJECT`.
 - Cloudflare Access: add a Bypass policy for path `/api/ingest/applepay` so the Shortcut can reach it (token-protected). Optional WAF rate-limit rule on that path.

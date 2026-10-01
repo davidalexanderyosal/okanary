@@ -21,5 +21,7 @@
   ],
   // Workers AI: category suggestions + email-parse fallback. Always remote; local dev uses wrangler.dev.jsonc (no AI binding).
   "ai": { "binding": "AI" },
+  // Hourly: promote stale pending Apple Pay items, email-silence health alerts (later phases add daily/weekly dispatch on the cron string)
+  "triggers": { "crons": ["0 * * * *"] },
   "observability": { "enabled": true }
 }

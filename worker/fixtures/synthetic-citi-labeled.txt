@@ -1,0 +1,14 @@
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=citibank.com.sg; spf=pass
+From: Citi Alerts <alerts@citibank.com.sg>
+To: owner@example.com
+Subject: Citi Alert: Card Transaction
+Date: Thu, 15 Oct 2026 08:20:00 +0800
+Message-ID: <synthetic-citi-labeled-1@citibank.com.sg>
+Content-Type: text/plain; charset=utf-8
+
+Card: Citi Rewards ending 4321
+Merchant: STARBUCKS VIVOCITY
+Amount: SGD 6.80
+Date: 15 Oct 2026 08:18 SGT
+
+SYNTHETIC FIXTURE: invented for tests, not a real Citi email.

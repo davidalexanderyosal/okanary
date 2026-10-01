@@ -1,0 +1,13 @@
+Authentication-Results: mx.cloudflare.net; dkim=fail header.d=dbs.com; spf=fail
+From: DBS iBanking <ibanking.alert@dbs.com>
+To: owner@example.com
+Subject: Card Transaction Alert
+Date: Wed, 14 Oct 2026 12:12:05 +0800
+Message-ID: <synthetic-spoofed-1@dbs.com>
+Content-Type: text/plain; charset=utf-8
+
+Date & Time: 14 Oct 12:10 (SGT)
+Amount: SGD999.00
+From: DBS/POSB card ending 1234
+To: TOTALLY LEGIT SHOP
+SYNTHETIC FIXTURE: forged sender (DKIM fails), must NOT be parsed.
