@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { formatMoney, sgtDate, sgtLocalToUtc, sgtParts, type Account, type Category, type CategoryGroup } from "@okanary/core";
 import { api } from "../lib/api";
 import { invalidateAll } from "../lib/data";
+import { chipOrder } from "../lib/chips";
 import { displayTyped, keypadMinor, pressKey, type KeypadKey } from "../lib/keypad";
 import { groupColor } from "./groups";
 import { Sheet } from "./Sheet";
@@ -46,19 +47,7 @@ export function QuickAdd({ open, onClose, groups, categories, usage, accounts }:
   }, [open, accounts]);
 
   const minor = keypadMinor(amount, "SGD");
-  const groupSort = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
-  const chips = useMemo(
-    () =>
-      categories
-        .filter((c) => !c.archived)
-        .sort((a, b) => {
-          const ga = groupSort.get(a.group_id), gb = groupSort.get(b.group_id);
-          // most-used first; ties: Lifestyle (the point of the app), other spend groups, then non-spend groups
-          const rank = (g?: CategoryGroup) => (g?.id === "lifestyle" ? 0 : g?.counts_as_spend ? 1 : 2);
-          return (usage[b.id] ?? 0) - (usage[a.id] ?? 0) || rank(ga) - rank(gb) || (ga?.sort ?? 0) - (gb?.sort ?? 0) || a.sort - b.sort;
-        }),
-    [categories, groupSort, usage],
-  );
+  const chips = useMemo(() => chipOrder(categories, groups, usage), [categories, groups, usage]);
 
   async function save(categoryId: string | null) {
     if (minor <= 0 || busy) return;

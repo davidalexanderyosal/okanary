@@ -1,10 +1,12 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 import { QuickAdd } from "./components/QuickAdd";
 import { ToastProvider } from "./components/Toast";
 import { useRefData } from "./lib/refdata";
 import { Home } from "./pages/Home";
+import { Review } from "./pages/Review";
 import { Settings } from "./pages/Settings";
+import { Setup } from "./pages/Setup";
 import { Transactions } from "./pages/Transactions";
 
 const Reports = lazy(() => import("./pages/Reports").then((m) => ({ default: m.Reports })));
@@ -19,6 +21,11 @@ const tabs = [
 function Shell() {
   const [adding, setAdding] = useState(false);
   const ref = useRefData();
+  useEffect(() => {
+    const open = () => setAdding(true);
+    window.addEventListener("okanary:quickadd", open);
+    return () => window.removeEventListener("okanary:quickadd", open);
+  }, []);
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
       <main className="flex-1 pb-[calc(env(safe-area-inset-bottom)+88px)]">
@@ -27,6 +34,8 @@ function Shell() {
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/reports" element={<Suspense fallback={null}><Reports /></Suspense>} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/setup" element={<Setup />} />
+          <Route path="/review" element={<Review />} />
         </Routes>
       </main>
 

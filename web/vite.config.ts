@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: "injectManifest", // custom service worker (src/sw.ts) handles web push + notification clicks
+      srcDir: "src",
+      filename: "sw.ts",
       registerType: "autoUpdate",
       includeAssets: ["apple-touch-icon.png", "icon.svg"],
       manifest: {
@@ -26,11 +29,7 @@ export default defineConfig({
           { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
-      workbox: {
-        // API responses are never cached by the service worker; the app shell is.
-        navigateFallbackDenylist: [/^\/api\//],
-        globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
-      },
+      injectManifest: { globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"] },
     }),
   ],
   server: { proxy: { "/api": "http://localhost:8787" } },

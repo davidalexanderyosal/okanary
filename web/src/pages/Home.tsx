@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, type TxnRowData } from "../lib/api";
 import { useResource } from "../lib/data";
 import { monthLabel, sgd } from "../lib/format";
@@ -39,6 +40,12 @@ export function Home() {
           </p>
         )}
       </header>
+
+      {s && s.reviewCount > 0 && (
+        <Link to="/review" className="tap mt-3 flex items-center justify-between rounded-2xl bg-accent/15 px-4 py-2 text-sm font-medium text-accent">
+          <span>{s.reviewCount} to categorise</span><span aria-hidden>›</span>
+        </Link>
+      )}
 
       <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm" aria-label="Lifestyle">
         <div className="flex items-baseline justify-between">

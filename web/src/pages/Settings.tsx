@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import type { Account } from "@okanary/core";
 import { api } from "../lib/api";
-import { invalidateAll } from "../lib/data";
+import { invalidateAll, useResource } from "../lib/data";
 import { useRefData } from "../lib/refdata";
 import { useToast } from "../components/Toast";
 
@@ -53,6 +54,7 @@ function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => voi
 
 export function Settings() {
   const ref = useRefData();
+  const rules = useResource("rules", api.rules);
   const toast = useToast();
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [newCat, setNewCat] = useState<{ group: string; name: string }>({ group: "lifestyle", name: "" });
@@ -101,6 +103,19 @@ export function Settings() {
             onClick={() => void api.createCategory({ group_id: newCat.group, name: newCat.name.trim() }).then(() => { invalidateAll(); setNewCat({ ...newCat, name: "" }); }).catch((e) => toast({ msg: String(e) }))}>Add</button>
         </div>
       </section>
+
+      <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm">
+        <h2 className="pb-2 text-sm font-semibold text-muted">Merchant rules</h2>
+        {(rules.data ?? []).length === 0 && <p className="text-sm text-muted">No rules yet. Change a category and tap “Always” to teach Okanary.</p>}
+        {(rules.data ?? []).map((r) => (
+          <div key={r.id} className="flex items-center justify-between py-1 text-sm">
+            <span className="min-w-0"><span className="font-mono text-xs">{r.pattern}</span> <span className="text-muted">({r.match_type})</span> → <b>{r.set_excluded ? "excluded" : r.category_name}</b><span className="text-xs text-muted"> · {r.hits} hits</span></span>
+            <button className="tap text-danger" aria-label="Delete rule" onClick={() => void api.deleteRule(r.id).then(invalidateAll)}>✕</button>
+          </div>
+        ))}
+      </section>
+
+      <Link to="/setup" className="tap mt-4 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Auto-capture &amp; notifications</span><span className="text-muted">›</span></Link>
 
       <section className="mt-4 rounded-3xl bg-card p-4 text-sm text-muted shadow-sm">
         <h2 className="pb-1 font-semibold">Install on iPhone</h2>

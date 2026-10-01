@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { monthRangeUtc, type Transaction } from "@okanary/core";
+import { monthRangeUtc, normalizeMerchant, type Transaction } from "@okanary/core";
 import type { AppEnv } from "../env";
 import { getTransaction, TXN_WITH_GROUP_SQL } from "../db";
 import { nowIso, ulid } from "../util";
@@ -72,14 +72,15 @@ transactions.post("/", async (c) => {
   }
   const now = nowIso();
   const id = ulid();
-  const merchant = d.merchant?.trim() || null;
+  const merchantRaw = d.merchant?.trim() || null;
+  const merchant = merchantRaw ? normalizeMerchant(merchantRaw) : null; // merchant is the normalised form (spec §4.4)
   await c.env.DB.prepare(
     `INSERT INTO transactions (id, occurred_at, account_id, amount_minor, currency, amount_sgd_minor, fx_rate, fx_source,
        merchant_raw, merchant, category_id, category_source, status, source, is_refund, is_reimbursable, is_excluded, note, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'confirmed','manual',?,?,?,?,?,?)`,
   )
     .bind(id, d.occurred_at ?? now, d.account_id ?? null, d.amount_minor, d.currency, sgd, fxRate, fxSource,
-      merchant, merchant, d.category_id ?? null, d.category_id ? "user" : null,
+      merchantRaw, merchant, d.category_id ?? null, d.category_id ? "user" : null,
       d.is_refund ?? 0, d.is_reimbursable ?? 0, d.is_excluded ?? 0, d.note ?? null, now, now)
     .run();
   return c.json(await getTransaction(c.env.DB, id), 201);
@@ -97,7 +98,11 @@ transactions.patch("/:id", async (c) => {
   if (d.currency !== undefined) next.currency = d.currency;
   if (d.occurred_at !== undefined) next.occurred_at = d.occurred_at;
   if (d.account_id !== undefined) next.account_id = d.account_id;
-  if (d.merchant !== undefined) { next.merchant = d.merchant?.trim() || null; next.merchant_raw = next.merchant; }
+  if (d.merchant !== undefined) {
+    const raw = d.merchant?.trim() || null;
+    next.merchant_raw = raw;
+    next.merchant = raw ? normalizeMerchant(raw) : null;
+  }
   if (d.category_id !== undefined) { next.category_id = d.category_id; next.category_source = d.category_id ? "user" : null; }
   if (d.note !== undefined) next.note = d.note;
   for (const k of ["is_refund", "is_reimbursable", "is_excluded"] as const) if (d[k] !== undefined) next[k] = d[k];

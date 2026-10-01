@@ -7,8 +7,9 @@
   "scripts": {
     "test": "npm test --workspaces --if-present",
     "build": "npm run build -w web && npm run build -w worker",
-    "dev": "npm run build -w web && wrangler dev",
-    "db:migrate:local": "wrangler d1 migrations apply okanary --local",
+    "dev": "npm run build -w web && wrangler dev -c wrangler.dev.jsonc",
+    "vapid": "node scripts/gen-vapid.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply okanary --local -c wrangler.dev.jsonc",
     "db:migrate:remote": "wrangler d1 migrations apply okanary --remote",
     "deploy": "npm run build && wrangler deploy"
   },

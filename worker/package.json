@@ -9,6 +9,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0",
     "@okanary/core": "*",
     "hono": "^4.6.0",
     "postal-mime": "^2.4.0",

@@ -21,6 +21,13 @@ export interface NewTxn {
   is_refund?: boolean; is_reimbursable?: boolean; is_excluded?: boolean;
 }
 
+export interface RuleRow { id: string; match_type: string; pattern: string; category_id: string | null; category_name: string | null; set_excluded: number; priority: number; hits: number }
+export interface FailedRaw { id: string; source: string; received_at: string; payload: string | null; error: string | null }
+export interface SetupInfo {
+  ingest_path: string; token: string | null; last_applepay_at: string | null;
+  push: { configured: boolean; public_key: string | null; subscriptions: number; post_purchase: boolean };
+}
+
 export const api = {
   summary: (month: string) => req<Summary>(`/api/summary?month=${month}`),
   categories: () => req<CategoriesResponse>("/api/categories"),
@@ -37,4 +44,17 @@ export const api = {
   patchAccount: (id: string, a: Partial<Account>) => req<Account>(`/api/accounts/${id}`, body("PATCH", a)),
   createCategory: (c: { group_id: string; name: string }) => req<Category>("/api/categories", body("POST", c)),
   patchCategory: (id: string, c: Partial<Category>) => req<Category>(`/api/categories/${id}`, body("PATCH", c)),
+
+  transaction: (id: string) => req<TxnRowData>(`/api/transactions/${id}`),
+  review: () => req<{ items: TxnRowData[]; failed: FailedRaw[] }>("/api/review"),
+  dismissRaw: (id: string) => req<{ ok: true }>(`/api/raw-ingest/${id}/dismiss`, { method: "POST" }),
+  rules: () => req<RuleRow[]>("/api/rules"),
+  createRule: (r: { pattern: string; category_id: string | null; match_type?: string; set_excluded?: boolean }) => req<RuleRow>("/api/rules", body("POST", r)),
+  deleteRule: (id: string) => req<{ ok: true }>(`/api/rules/${id}`, { method: "DELETE" }),
+  setup: () => req<SetupInfo>("/api/setup"),
+  rotateToken: () => req<{ token: string }>("/api/setup/token", { method: "POST" }),
+  putSettings: (s: { push_post_purchase?: boolean }) => req<{ ok: true }>("/api/settings", body("PUT", s)),
+  pushSubscribe: (sub: unknown) => req<{ ok: true }>("/api/push/subscribe", body("POST", sub)),
+  pushUnsubscribe: (endpoint: string) => req<{ ok: true }>("/api/push/unsubscribe", body("POST", { endpoint })),
+  pushTest: () => req<{ delivered: number; configured: boolean }>("/api/push/test", { method: "POST" }),
 };

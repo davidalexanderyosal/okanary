@@ -1,6 +1,7 @@
+// LOCAL DEV ONLY (generated from wrangler.jsonc minus the remote-only AI binding). `npm run dev` uses this so nothing leaves your machine.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "okanary",
+  "name": "okanary-dev",
   "main": "worker/src/index.ts",
   "compatibility_date": "2025-09-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -19,7 +20,5 @@
       "migrations_dir": "worker/migrations"
     }
   ],
-  // Workers AI: category suggestions + email-parse fallback. Always remote; local dev uses wrangler.dev.jsonc (no AI binding).
-  "ai": { "binding": "AI" },
   "observability": { "enabled": true }
 }

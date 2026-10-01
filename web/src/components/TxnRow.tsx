@@ -1,7 +1,7 @@
 import { formatMoney } from "@okanary/core";
 import type { Account, Category } from "@okanary/core";
 import type { TxnRowData } from "../lib/api";
-import { timeLabel } from "../lib/format";
+import { prettyMerchant, timeLabel } from "../lib/format";
 import { groupColor } from "./groups";
 
 export function TxnRow({ t, categories, accounts, onClick }: { t: TxnRowData; categories: Map<string, Category>; accounts: Map<string, Account>; onClick: () => void }) {
@@ -9,7 +9,7 @@ export function TxnRow({ t, categories, accounts, onClick }: { t: TxnRowData; ca
   const acct = t.account_id ? accounts.get(t.account_id) : undefined;
   const refund = !!t.is_refund;
   const dim = !!t.is_excluded || !!t.is_reimbursable || t.status === "void";
-  const title = t.merchant || cat?.name || "Expense";
+  const title = prettyMerchant(t.merchant) || cat?.name || "Expense";
   const sub = [t.merchant ? (cat?.name ?? "Uncategorised") : null, acct?.name, timeLabel(t.occurred_at)].filter(Boolean).join(" · ");
   return (
     <button onClick={onClick} className="tap flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-line/50">
@@ -21,6 +21,7 @@ export function TxnRow({ t, categories, accounts, onClick }: { t: TxnRowData; ca
           {t.is_excluded ? " · excluded" : ""}
           {t.is_reimbursable ? " · reimbursable" : ""}
           {t.status === "pending" ? " · pending" : ""}
+          {t.category_source === "ai" ? " · suggested" : ""}
         </span>
       </span>
       <span className={`num text-[15px] font-semibold ${refund ? "text-savings" : ""} ${dim ? "line-through opacity-50" : ""}`}>

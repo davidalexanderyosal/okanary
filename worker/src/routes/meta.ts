@@ -13,9 +13,9 @@ meta.get("/health", async (c) => {
 });
 
 meta.get("/summary", async (c) => {
-  const month = c.req.query("month") ?? currentMonthSgt();
+  const month = c.req.query("month") ?? currentMonthSgt(c.var.deps.now());
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return c.json({ error: "bad month" }, 400);
-  return c.json(await monthSummary(c.env.DB, month));
+  return c.json(await monthSummary(c.env.DB, month, c.var.deps.now()));
 });
 
 // ---- reference data ----

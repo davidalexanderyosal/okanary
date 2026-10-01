@@ -69,7 +69,8 @@ describe("API", () => {
     expect(s.total).toBe(0);
   });
 
-  it("unknown /api routes 404 and ingest is not implemented", async () => {
-    expect((await call("/api/ingest/applepay", { method: "POST" })).status).toBe(404);
+  it("unknown /api routes 404; ingest refuses to run without a configured token", async () => {
+    expect((await call("/api/nope")).status).toBe(404);
+    expect((await call("/api/ingest/applepay", { method: "POST" })).status).toBe(503);
   });
 });

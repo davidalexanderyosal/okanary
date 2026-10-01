@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { minorToDecimalString, parseMajorToMinor, sgtDate, sgtLocalToUtc, sgtParts, type Account, type Category, type CategoryGroup } from "@okanary/core";
 import { api, type TxnRowData } from "../lib/api";
 import { invalidateAll } from "../lib/data";
+import { offerRule } from "../lib/rules";
 import { Sheet } from "./Sheet";
 import { useToast } from "./Toast";
 
@@ -27,7 +28,7 @@ export function EditTxnSheet({ txn, onClose, groups, categories, accounts }: {
     const p = sgtParts(txn.occurred_at);
     setAmount(minorToDecimalString(txn.amount_minor, txn.currency));
     setSgdAmount(minorToDecimalString(txn.amount_sgd_minor, "SGD"));
-    setMerchant(txn.merchant ?? ""); setCat(txn.category_id ?? ""); setAcct(txn.account_id ?? "");
+    setMerchant(txn.merchant_raw ?? txn.merchant ?? ""); setCat(txn.category_id ?? ""); setAcct(txn.account_id ?? "");
     setDate(sgtDate(txn.occurred_at)); setTime(`${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}`);
     setNote(txn.note ?? ""); setRefund(!!txn.is_refund); setReimb(!!txn.is_reimbursable); setExcl(!!txn.is_excluded); setBusy(false);
   }, [txn]);
@@ -48,6 +49,8 @@ export function EditTxnSheet({ txn, onClose, groups, categories, accounts }: {
       });
       invalidateAll();
       onClose();
+      const c = categories.find((x) => x.id === cat);
+      if (c && cat !== (txn.category_id ?? "") && merchant.trim()) offerRule(toast, { merchant: merchant.trim().toUpperCase() }, c.id, c.name);
     } catch (e) {
       setBusy(false);
       toast({ msg: `Couldn't save: ${e instanceof Error ? e.message : e}` });

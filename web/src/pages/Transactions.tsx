@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { addMonths, isSpend, sgtDate, signedSgdMinor } from "@okanary/core";
 import { api, type TxnRowData } from "../lib/api";
 import { useResource } from "../lib/data";
@@ -25,6 +26,12 @@ export function Transactions() {
   const [group, setGroup] = useState("");
   const [editing, setEditing] = useState<TxnRowData | null>(null);
   const ref = useRefData();
+  const [params, setParams] = useSearchParams();
+  const editId = params.get("edit"); // set by notification taps: open the item to change its category
+  useEffect(() => {
+    if (!editId) return;
+    void api.transaction(editId).then(setEditing).catch(() => undefined).finally(() => setParams({}, { replace: true }));
+  }, [editId, setParams]);
   const list = useResource(`txns:${month}:${q}:${group}`, () => api.transactions({ month, q, group, limit: 500 }));
   const today = sgtDate(new Date());
 
