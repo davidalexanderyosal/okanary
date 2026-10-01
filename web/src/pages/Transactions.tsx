@@ -24,6 +24,8 @@ export function Transactions() {
   const [month, setMonth] = useState(currentMonth());
   const [q, setQ] = useState("");
   const [group, setGroup] = useState("");
+  const [trip, setTrip] = useState("");
+  const trips = useResource("trips", api.trips).data ?? [];
   const [editing, setEditing] = useState<TxnRowData | null>(null);
   const ref = useRefData();
   const [params, setParams] = useSearchParams();
@@ -32,7 +34,7 @@ export function Transactions() {
     if (!editId) return;
     void api.transaction(editId).then(setEditing).catch(() => undefined).finally(() => setParams({}, { replace: true }));
   }, [editId, setParams]);
-  const list = useResource(`txns:${month}:${q}:${group}`, () => api.transactions({ month, q, group, limit: 500 }));
+  const list = useResource(`txns:${month}:${q}:${group}:${trip}`, () => api.transactions({ month: trip ? undefined : month, q, group, trip, limit: 500 }));
   const today = sgtDate(new Date());
 
   const days = useMemo(() => {
@@ -53,6 +55,12 @@ export function Transactions() {
           <button key={g.id} onClick={() => setGroup(g.id)} className={`tap shrink-0 rounded-full border px-4 text-sm ${group === g.id ? "border-accent bg-accent text-accent-fg" : "border-line bg-card"}`}>{g.name}</button>
         ))}
       </div>
+      {trips.length > 0 && (
+        <select className="tap mt-1 w-full rounded-xl border border-line bg-card px-3 text-sm" value={trip} onChange={(e) => setTrip(e.target.value)} aria-label="Trip">
+          <option value="">All trips and none</option>
+          {trips.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+      )}
       <div className="mb-6 mt-2 space-y-3">
         {list.data && days.length === 0 && <p className="py-10 text-center text-sm text-muted">Nothing here.</p>}
         {days.map(([d, rows]) => {

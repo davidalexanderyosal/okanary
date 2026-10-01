@@ -2,10 +2,11 @@ import { addMonths, monthRangeUtc, resolveBudgets, summarizeMonth, type BudgetRo
 
 /** Columns every spend calculation needs: the txn plus its category's group and counts_as_spend. */
 export const TXN_WITH_GROUP_SQL = `
-  SELECT t.*, c.group_id AS group_id, g.counts_as_spend AS group_counts_as_spend
+  SELECT t.*, c.group_id AS group_id, g.counts_as_spend AS group_counts_as_spend, COALESCE(tr.exclude_from_monthly, 0) AS trip_excluded
   FROM transactions t
   LEFT JOIN categories c ON c.id = t.category_id
-  LEFT JOIN category_groups g ON g.id = c.group_id`;
+  LEFT JOIN category_groups g ON g.id = c.group_id
+  LEFT JOIN trips tr ON tr.id = t.trip_id`;
 
 /**
  * Review inbox predicate (spec §7.3): anything not void/excluded that has no category, carries only an AI *suggestion*,

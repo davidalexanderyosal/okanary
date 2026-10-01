@@ -54,6 +54,7 @@ transactions.get("/", async (c) => {
   if (q.category) { where.push("t.category_id = ?"); binds.push(q.category); }
   if (q.account) { where.push("t.account_id = ?"); binds.push(q.account); }
   if (q.source) { where.push("t.source = ?"); binds.push(q.source); }
+  if (q.trip) { where.push("t.trip_id = ?"); binds.push(q.trip); }
   if (q.q) { where.push("(t.merchant LIKE ? OR t.note LIKE ?)"); binds.push(`%${q.q}%`, `%${q.q}%`); }
   const limit = Math.min(Number(q.limit) || 200, 500);
   const sql = `${TXN_WITH_GROUP_SQL} ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY t.occurred_at DESC, t.id DESC LIMIT ?`;

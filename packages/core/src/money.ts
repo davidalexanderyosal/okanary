@@ -77,6 +77,16 @@ export function formatMoney(minor: number, currency = "SGD", opts: { compact?: b
   return (neg ? "-" : "") + sym + groupThousands(i!) + (f !== undefined ? "." + f : "");
 }
 
+/** Terse display for notifications: whole dollars from 10 units up ("S$128", "S$1,210"), cents below ("S$4.50"). */
+export function formatMoneyShort(minor: number, currency = "SGD"): string {
+  const cur = currency.toUpperCase();
+  const exp = currencyExponent(cur);
+  const abs = Math.abs(minor);
+  if (exp === 0 || abs < 10 ** (exp + 1)) return formatMoney(minor, cur);
+  const whole = Math.floor((abs + 10 ** exp / 2) / 10 ** exp);
+  return (minor < 0 ? "-" : "") + (SYMBOLS[cur] ?? cur + " ") + groupThousands(String(whole));
+}
+
 export function addMinor(...xs: number[]): number {
   let t = 0;
   for (const x of xs) {

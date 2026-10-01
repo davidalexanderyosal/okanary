@@ -20,7 +20,7 @@
       "migrations_dir": "worker/migrations"
     }
   ],
-  // Hourly: promote stale pending Apple Pay items, email-silence health alerts (later phases add daily/weekly dispatch on the cron string)
-  "triggers": { "crons": ["0 * * * *"] },
+  // Hourly: promote stale pending Apple Pay items, email-silence alerts, FX refresh. Daily 02:00 SGT: recurring detection. Sunday 20:00 SGT: weekly digest.
+  "triggers": { "crons": ["0 * * * *", "0 18 * * *", "0 12 * * 0"] },
   "observability": { "enabled": true }
 }

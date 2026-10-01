@@ -20,6 +20,7 @@ export interface CaptureInput {
   account_id: string | null;
   status: Transaction["status"];
   raw_id?: string;
+  is_refund?: boolean;
 }
 
 export interface CaptureResult {
@@ -87,10 +88,10 @@ export async function captureTransaction(env: Env, deps: Deps, input: CaptureInp
   await env.DB.prepare(
     `INSERT INTO transactions (id, occurred_at, account_id, amount_minor, currency, amount_sgd_minor, fx_rate, fx_source,
        merchant_raw, merchant, category_id, category_source, status, source, is_refund, is_reimbursable, is_excluded, note, trip_id, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,?,?,?,?,?)`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
   )
     .bind(id, input.occurred_at, input.account_id, input.amount_minor, input.currency, money.sgd, money.fxRate, money.fxSource,
-      input.merchant_raw || null, merchant || null, cat.category_id, cat.source, money.status, input.source, cat.set_excluded ? 1 : 0, money.note, tripId, now, now)
+      input.merchant_raw || null, merchant || null, cat.category_id, cat.source, money.status, input.source, input.is_refund ? 1 : 0, cat.set_excluded ? 1 : 0, money.note, tripId, now, now)
     .run();
   if (input.raw_id) await env.DB.prepare("UPDATE raw_ingest SET transaction_id = ?, parse_status = 'ok' WHERE id = ?").bind(id, input.raw_id).run();
 

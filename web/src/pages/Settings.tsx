@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { Account } from "@okanary/core";
 import { api, type Trip } from "../lib/api";
 import { invalidateAll, useResource } from "../lib/data";
+import { sgd } from "../lib/format";
 import { useRefData } from "../lib/refdata";
 import { useToast } from "../components/Toast";
 
@@ -54,9 +55,9 @@ function AccountForm({ initial, onDone }: { initial?: Account; onDone: () => voi
 
 function TripForm({ initial, onDone }: { initial?: Trip; onDone: () => void }) {
   const toast = useToast();
-  const [v, setV] = useState({ name: initial?.name ?? "", start: initial?.start_date ?? "", end: initial?.end_date ?? "", currency: initial?.currency ?? "" });
+  const [v, setV] = useState({ name: initial?.name ?? "", start: initial?.start_date ?? "", end: initial?.end_date ?? "", currency: initial?.currency ?? "", exclude: !!initial?.exclude_from_monthly });
   async function save() {
-    const body = { name: v.name.trim(), start_date: v.start || null, end_date: v.end || null, currency: v.currency || null };
+    const body = { name: v.name.trim(), start_date: v.start || null, end_date: v.end || null, currency: v.currency || null, exclude_from_monthly: v.exclude ? 1 : 0 };
     try {
       if (initial) await api.patchTrip(initial.id, body); else await api.createTrip(body);
       invalidateAll();
@@ -74,6 +75,7 @@ function TripForm({ initial, onDone }: { initial?: Trip; onDone: () => void }) {
         <option value="">Currency: none</option>
         {["IDR", "JPY", "USD", "MYR", "EUR", "GBP", "THB", "AUD", "KRW"].map((c) => <option key={c} value={c}>{c}</option>)}
       </select>
+      <label className="tap flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={v.exclude} onChange={(e) => setV({ ...v, exclude: e.target.checked })} />Keep this trip out of my monthly totals and budgets</label>
       <div className="flex gap-2">
         <button className="tap rounded-xl border border-line px-4" onClick={onDone}>Cancel</button>
         <button className="tap flex-1 rounded-xl bg-accent font-semibold text-accent-fg disabled:opacity-40" disabled={!v.name.trim()} onClick={() => void save()}>Save</button>
@@ -147,7 +149,7 @@ export function Settings() {
           <div key={t.id} className="flex items-center justify-between">
             <button className="tap flex-1 text-left" onClick={() => setEditingTrip(t.id)}>
               <span className="block font-medium">{t.name}</span>
-              <span className="block text-xs text-muted">{t.start_date ?? "?"} → {t.end_date ?? "?"}{t.currency ? ` · ${t.currency}` : ""}</span>
+              <span className="block text-xs text-muted">{t.start_date ?? "?"} → {t.end_date ?? "?"}{t.currency ? ` · ${t.currency}` : ""} · {sgd(t.spent_sgd_minor ?? 0)} spent{t.exclude_from_monthly ? " · not in monthly totals" : ""}</span>
             </button>
             <button className="tap text-sm text-danger" onClick={() => window.confirm(`Delete “${t.name}”? Its transactions stay, untagged.`) && void api.deleteTrip(t.id).then(invalidateAll)}>Delete</button>
           </div>
@@ -165,7 +167,10 @@ export function Settings() {
         ))}
       </section>
 
-      <Link to="/setup" className="tap mt-4 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Auto-capture &amp; notifications</span><span className="text-muted">›</span></Link>
+      <Link to="/subscriptions" className="tap mt-4 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Subscriptions</span><span className="text-muted">›</span></Link>
+      <Link to="/import" className="tap mt-3 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Import a card statement</span><span className="text-muted">›</span></Link>
+      <Link to="/setup" className="tap mt-3 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Auto-capture &amp; notifications</span><span className="text-muted">›</span></Link>
+      <a href="/api/export/transactions.csv" download className="tap mt-3 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Export all transactions (CSV)</span><span className="text-muted">↓</span></a>
 
       <section className="mt-4 rounded-3xl bg-card p-4 text-sm text-muted shadow-sm">
         <h2 className="pb-1 font-semibold">Install on iPhone</h2>

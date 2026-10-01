@@ -27,7 +27,7 @@ setup.get("/setup", async (c) => {
     ingest_path: "/api/ingest/applepay",
     token,
     last_applepay_at: last?.received_at ?? null,
-    push: { configured: pushConfigured(c.env), public_key: c.env.VAPID_PUBLIC_KEY ?? null, subscriptions: subs?.n ?? 0, post_purchase: post !== "0" },
+    push: { configured: pushConfigured(c.env), public_key: c.env.VAPID_PUBLIC_KEY ?? null, subscriptions: subs?.n ?? 0, post_purchase: post !== "0", weekly_digest: (await getSetting(c.env.DB, "push_weekly_digest")) !== "0" },
   });
 });
 
@@ -39,9 +39,10 @@ setup.post("/setup/token", async (c) => {
 });
 
 setup.put("/settings", async (c) => {
-  const p = z.object({ push_post_purchase: z.boolean().optional(), alert_thresholds: z.array(z.number().int().min(1).max(200)).max(6).optional() }).safeParse(await c.req.json().catch(() => null));
+  const p = z.object({ push_post_purchase: z.boolean().optional(), push_weekly_digest: z.boolean().optional(), alert_thresholds: z.array(z.number().int().min(1).max(200)).max(6).optional() }).safeParse(await c.req.json().catch(() => null));
   if (!p.success) return c.json({ error: p.error.flatten() }, 400);
   if (p.data.push_post_purchase !== undefined) await setSetting(c.env.DB, "push_post_purchase", p.data.push_post_purchase ? "1" : "0");
+  if (p.data.push_weekly_digest !== undefined) await setSetting(c.env.DB, "push_weekly_digest", p.data.push_weekly_digest ? "1" : "0");
   if (p.data.alert_thresholds) await setSetting(c.env.DB, "alert_thresholds", parseThresholds(p.data.alert_thresholds.join(",")).join(","));
   return c.json({ ok: true });
 });

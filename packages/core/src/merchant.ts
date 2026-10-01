@@ -46,3 +46,9 @@ export function merchantSimilarity(a: string, b: string): number {
   const containment = inter / Math.min(ta.size, tb.size);
   return Math.max(inter / (ta.size + tb.size - inter), containment * 0.9);
 }
+
+/** "SQ *YA KUN" is stored normalised ("YA KUN"); show it as "Ya Kun". */
+export function prettyMerchant(m: string | null | undefined): string {
+  if (!m) return "";
+  return m.toLowerCase().replace(/(^|[\s/&-])([a-z])/g, (_, a: string, b: string) => a + b.toUpperCase());
+}

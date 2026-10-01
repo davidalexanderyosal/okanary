@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { expectedByDay } from "@okanary/core";
+import { addMonths, expectedByDay } from "@okanary/core";
 import { api, type Summary } from "../lib/api";
 import { useResource } from "../lib/data";
 import { monthLabel, prettyMerchant, sgd, shortDate } from "../lib/format";
@@ -129,25 +129,59 @@ function Merchants({ s }: { s: Summary }) {
   );
 }
 
-function Trend({ month }: { month: string }) {
-  const t = useResource("trend:6", () => api.trend(6, "lifestyle")).data;
+function Delta({ now, prev }: { now: number; prev: number }) {
+  if (prev === 0 && now === 0) return <span className="text-muted">–</span>;
+  if (prev === 0) return <span className="text-muted">new</span>;
+  const pct = Math.round(((now - prev) * 100) / prev);
+  return <span className={pct > 0 ? "text-danger" : "text-savings"}>{pct > 0 ? "▲" : pct < 0 ? "▼" : ""} {Math.abs(pct)}%</span>;
+}
+
+/** Month-over-month per group/category plus a 6-month trend for any one of them (spec §3.2). */
+function Trend({ month, s }: { month: string; s: Summary }) {
+  const ref = useRefData();
+  const [target, setTarget] = useState("group:lifestyle");
+  const prevMonth = addMonths(month, -1);
+  const prev = useResource(`summary:${prevMonth}`, () => api.summary(prevMonth)).data;
+  const [kind, id] = target.split(":") as ["group" | "category", string];
+  const t = useResource(`trend:6:${target}`, () => (kind === "group" ? api.trend(6, id) : api.trend(6, "lifestyle", id))).data;
   const data = (t?.points ?? []).map((p) => ({ ...p, label: monthLabel(p.month).slice(0, 3) }));
+  const color = kind === "group" ? groupColor(id) : groupColor(ref.categoryMap.get(id)?.group_id);
+  const spendGroups = ref.groups.filter((g) => g.counts_as_spend);
+  const get = (sum: Summary | undefined, scope: "group" | "category", k: string) => (scope === "group" ? sum?.byGroup : sum?.byCategory)?.find((b) => b.id === k)?.spent ?? 0;
+  const catRows = ref.categories.filter((c) => !c.archived && (get(s, "category", c.id) || get(prev, "category", c.id)));
   return (
-    <Card title="Lifestyle, last 6 months">
-      <div className="h-52" aria-label="Lifestyle trend">
-        <ResponsiveContainer>
-          <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--line)" vertical={false} />
-            <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} />
-            <YAxis tick={AXIS} tickFormatter={axisMoney} tickLine={false} axisLine={false} width={38} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [sgd(v, false), "Lifestyle"]} />
-            <Bar dataKey="group" radius={[6, 6, 0, 0]} isAnimationActive={false}>
-              {data.map((p) => <Cell key={p.month} fill="var(--lifestyle)" opacity={p.month === month ? 1 : 0.55} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </Card>
+    <>
+      <Card title="Six-month trend">
+        <select className="tap mb-3 w-full rounded-xl border border-line bg-bg px-3 text-sm" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Group or category">
+          <optgroup label="Groups">{spendGroups.map((g) => <option key={g.id} value={`group:${g.id}`}>{g.name}</option>)}</optgroup>
+          {spendGroups.map((g) => (
+            <optgroup key={g.id} label={`${g.name} categories`}>{ref.categories.filter((c) => c.group_id === g.id && !c.archived).map((c) => <option key={c.id} value={`category:${c.id}`}>{c.name}</option>)}</optgroup>
+          ))}
+        </select>
+        <div className="h-52" aria-label="Trend chart">
+          <ResponsiveContainer>
+            <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid stroke="var(--line)" vertical={false} />
+              <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} />
+              <YAxis tick={AXIS} tickFormatter={axisMoney} tickLine={false} axisLine={false} width={38} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [sgd(v, false), "Spent"]} />
+              <Bar dataKey="group" radius={[6, 6, 0, 0]} isAnimationActive={false}>
+                {data.map((p) => <Cell key={p.month} fill={color} opacity={p.month === month ? 1 : 0.55} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+      <Card title={`${monthLabel(month)} vs ${monthLabel(prevMonth)}`}>
+        <p className="flex justify-between border-b border-line pb-2 text-sm font-semibold"><span>Total</span><span className="num">{sgd(s.total)} <span className="text-xs font-normal"><Delta now={s.total} prev={prev?.total ?? 0} /></span></span></p>
+        {spendGroups.map((g) => (
+          <p key={g.id} className="flex justify-between border-b border-line py-2 text-sm"><span>{g.name}</span><span className="num">{sgd(get(s, "group", g.id))} <span className="text-xs"><Delta now={get(s, "group", g.id)} prev={get(prev, "group", g.id)} /></span></span></p>
+        ))}
+        {catRows.map((c) => (
+          <p key={c.id} className="flex justify-between py-1.5 text-sm text-muted"><span>{c.name}</span><span className="num">{sgd(get(s, "category", c.id))} <span className="text-xs"><Delta now={get(s, "category", c.id)} prev={get(prev, "category", c.id)} /></span></span></p>
+        ))}
+      </Card>
+    </>
   );
 }
 
@@ -194,7 +228,7 @@ export function Reports() {
       {tab === "overview" && s && <Overview s={s} />}
       {tab === "daily" && s && <Daily s={s} month={month} />}
       {tab === "merchants" && s && <Merchants s={s} />}
-      {tab === "trend" && <Trend month={month} />}
+      {tab === "trend" && s && <Trend month={month} s={s} />}
       {tab === "cards" && <Cards />}
       <div className="h-6" />
     </div>

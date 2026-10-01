@@ -128,6 +128,10 @@ export function Setup() {
           <input type="checkbox" className="h-5 w-5" checked={s?.push.post_purchase ?? true} onChange={(e) => void api.putSettings({ push_post_purchase: e.target.checked }).then(invalidateAll)} />
           Notify after each auto-captured purchase
         </label>
+        <label className="tap flex items-center gap-3 text-sm">
+          <input type="checkbox" className="h-5 w-5" checked={s?.push.weekly_digest ?? true} onChange={(e) => void api.putSettings({ push_weekly_digest: e.target.checked }).then(invalidateAll)} />
+          Sunday-evening weekly digest
+        </label>
       </section>
     </div>
   );

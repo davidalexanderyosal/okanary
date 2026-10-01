@@ -23,7 +23,16 @@ export interface NewTxn {
 
 export interface RuleRow { id: string; match_type: string; pattern: string; category_id: string | null; category_name: string | null; set_excluded: number; priority: number; hits: number }
 export interface FailedRaw { id: string; source: string; received_at: string; payload: string | null; error: string | null }
-export interface Trip { id: string; name: string; start_date: string | null; end_date: string | null; exclude_from_monthly: number; currency: string | null }
+export interface Trip { id: string; name: string; start_date: string | null; end_date: string | null; exclude_from_monthly: number; currency: string | null; spent_sgd_minor?: number; count?: number }
+export interface Subscription { id: string; merchant: string; expected_amount_sgd_minor: number | null; cadence: string | null; next_expected: string | null; category_id: string | null; active: number; confirmed_by_user: number }
+export interface ImportResult {
+  mode: "csv" | "text"; skipped: number; existing_in_window: number;
+  applied: { corrected: number; confirmed: number; added: number } | null;
+  matched: { date: string; description: string; billed: number; txn: { merchant: string | null; amount_sgd_minor: number } | null; correct_sgd_to: number | null }[];
+  to_add: { date: string; description: string; amount: number }[];
+  payments: { date: string; description: string; amount: number }[];
+  not_on_statement: { id: string; merchant?: string | null; amount_sgd_minor?: number; occurred_at?: string }[];
+}
 export interface CycleInfo {
   account: { id: string; name: string; bank: string | null; last4: string | null; statement_day: number | null; due_day: number | null };
   configured: boolean;
@@ -36,7 +45,7 @@ export interface SetupInfo {
   email: { forward_configured: boolean; banks: Record<string, { last_at: string; failed: number }> };
   ingest_path: string; token: string | null; last_applepay_at: string | null;
   alerts: { thresholds: number[] };
-  push: { configured: boolean; public_key: string | null; subscriptions: number; post_purchase: boolean };
+  push: { configured: boolean; public_key: string | null; subscriptions: number; post_purchase: boolean; weekly_digest: boolean };
 }
 
 export const api = {
@@ -71,7 +80,12 @@ export const api = {
   putBudget: (b: { scope: "group" | "category"; ref_id: string; month: string; amount_sgd_minor: number }) => req<{ month: string; budgets: BudgetRow[] }>("/api/budgets", body("PUT", b)),
   copyBudgets: (from: string, to: string) => req<{ copied: number; budgets: BudgetRow[] }>("/api/budgets/copy", body("POST", { from, to })),
   cycles: () => req<{ today: string; cycles: CycleInfo[] }>("/api/cycles"),
-  trend: (months = 6, group = "lifestyle") => req<{ group: string; points: { month: string; group: number; total: number }[] }>(`/api/trend?months=${months}&group=${group}`),
+  trend: (months = 6, group = "lifestyle", category?: string) => req<{ group: string; points: { month: string; group: number; total: number }[] }>(`/api/trend?months=${months}&group=${group}${category ? `&category=${category}` : ""}`),
+  subscriptions: () => req<{ items: Subscription[]; monthly_total: number; confirmed_total: number }>("/api/subscriptions"),
+  detectSubscriptions: () => req<{ added: number; updated: number }>("/api/subscriptions/detect", { method: "POST" }),
+  confirmSubscription: (id: string) => req<{ ok: true }>(`/api/subscriptions/${id}/confirm`, { method: "POST" }),
+  dismissSubscription: (id: string) => req<{ ok: true }>(`/api/subscriptions/${id}/dismiss`, { method: "POST" }),
+  importStatement: (b: { account_id: string; text: string; commit: boolean }) => req<ImportResult>("/api/import/statement", body("POST", b)),
   fx: (currency: string) => req<{ currency: string; rate: number; date: string }>(`/api/fx/${currency}`),
   trips: () => req<Trip[]>("/api/trips"),
   activeTrip: () => req<Trip | null>("/api/trips/active"),
@@ -79,7 +93,7 @@ export const api = {
   patchTrip: (id: string, t: Partial<Trip>) => req<Trip>(`/api/trips/${id}`, body("PATCH", t)),
   deleteTrip: (id: string) => req<{ ok: true }>(`/api/trips/${id}`, { method: "DELETE" }),
   rotateToken: () => req<{ token: string }>("/api/setup/token", { method: "POST" }),
-  putSettings: (s: { push_post_purchase?: boolean; alert_thresholds?: number[] }) => req<{ ok: true }>("/api/settings", body("PUT", s)),
+  putSettings: (s: { push_post_purchase?: boolean; push_weekly_digest?: boolean; alert_thresholds?: number[] }) => req<{ ok: true }>("/api/settings", body("PUT", s)),
   pushSubscribe: (sub: unknown) => req<{ ok: true }>("/api/push/subscribe", body("POST", sub)),
   pushUnsubscribe: (endpoint: string) => req<{ ok: true }>("/api/push/unsubscribe", body("POST", { endpoint })),
   pushTest: () => req<{ delivered: number; configured: boolean }>("/api/push/test", { method: "POST" }),

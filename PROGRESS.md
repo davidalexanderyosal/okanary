@@ -38,6 +38,19 @@ Branch: `claude/okanary-phases-0-5`. All work is local only (nothing deployed, n
 - Verified: core 97 tests (pace/safe-to-spend/thresholds/cycle dates/bill), worker 84 tests (budgets, alerts incl. once-per-period + race + spend-definition + jump-over-thresholds, FX, trips, cycles, trend); `wrangler dev` demo: Lifestyle crossing 50% then 80% of a S$900 budget wrote exactly one `alert_log` row each and nothing on further small spends.
 - Not verifiable here: real push delivery, live Frankfurter rates (sandbox blocks them), iPhone rendering of charts.
 
+## Phase 5 — Insight and accuracy: DONE
+- Subscriptions: daily detection (≥3 monthly charges, similar amount), Subscriptions screen with monthly/yearly totals, confirm / "Not one" / scan now.
+- Trends: per-group and per-category 6-month chart, month-over-month table (total, groups, categories with ▲▼ %).
+- Weekly digest push (Sunday 20:00 SGT): week total, Lifestyle vs pace, biggest 3 purchases; toggle in Setup.
+- Statement import & reconcile (CSV or pasted PDF text): preview, then apply; corrects billed SGD, adds missing, ignores payments, idempotent.
+- Trips with exclude-from-monthly (hidden from totals/budgets/alerts, still in trip total and card bill), trip totals, trip filter in Activity; CSV export of all transactions.
+- Verified: core 124 tests, worker 100 tests (detection/dismissal/cron, digest content + once-per-week, CSV, import preview/commit/idempotency/trip tagging/FX-guess correction, trip exclusion vs bill); `wrangler dev` with `--test-scheduled`: daily cron detected Netflix, weekly cron wrote the digest `alert_log` row, trip excluded from the month total, import commit then re-import added nothing, CSV served with BOM + download headers.
+- Bugs found and fixed by tests/demo during Phase 5: statement text parser read "12 SEP 13 SEP" as year 2013; import didn't trip-tag; SGD-typed guesses of foreign purchases were duplicated instead of corrected.
+
+## Status summary (end of build)
+All of Phases 0–5 are implemented, tested locally and committed on `claude/okanary-phases-0-5`. Nothing was deployed and no remote Cloudflare resource was touched.
+Totals at the end: 124 core + 100 worker + 10 web unit/integration tests passing; web and worker builds exit 0.
+
 ## Needs you (cumulative)
 - Decide your monthly budgets in the app (spec §10.7: last month's actual minus 10–15% is a good first Lifestyle value).
 - Set each credit card's statement day and due day (Settings → Accounts) to light up the card-cycle view.
@@ -49,4 +62,12 @@ Branch: `claude/okanary-phases-0-5`. All work is local only (nothing deployed, n
 - Secrets for Phase 2: `INGEST_TOKEN` (or generate in the app's Setup page), VAPID keys via `npm run vapid` → `wrangler secret put VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY/VAPID_SUBJECT`.
 - Cloudflare Access: add a Bypass policy for path `/api/ingest/applepay` so the Shortcut can reach it (token-protected). Optional WAF rate-limit rule on that path.
 - iPhone: build the Shortcuts Wallet automation using the in-app Setup page; Wallet card names must match Settings → account → Apple Wallet card name.
+- **Deploy, Access, Email Routing, iPhone install: follow README "First deploy"** (exact commands there).
 - Cloudflare: create D1, put real `database_id` in `wrangler.jsonc`, deploy, set up Access (commands will be in the final summary).
+
+## Known limitations / things I could not verify offline
+- DBS and Citi email parsers are UNVERIFIED (invented fixtures only); DKIM trust check unverified against real forwarded mail.
+- Real push delivery to an iPhone, a real Shortcuts Wallet run, live Frankfurter/ECB rates and live Workers AI could not be exercised in this sandbox (fakes/injection used; code paths for outages are tested).
+- PDF statements must be pasted as text (no in-app PDF parsing).
+- No Playwright/iPhone end-to-end suite; the UI was checked with headless Chromium at 390×844 only.
+- A foreign purchase recorded in SGD and billed >6% away still imports as a new line (shows up in the preview before you apply).

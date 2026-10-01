@@ -1,7 +1,9 @@
 import type { Deps } from "./deps";
 import type { Env } from "./env";
+import { sendWeeklyDigest } from "./digest";
 import { getSgdRate } from "./fx";
 import { sendPushToAll } from "./push";
+import { runRecurringDetection } from "./recurring";
 import { tripCovering } from "./trips";
 import { nowIso, ulid } from "./util";
 
@@ -44,9 +46,20 @@ export async function refreshFx(env: Env, deps: Deps): Promise<string[]> {
   return done;
 }
 
-/** Cron entry. Later phases dispatch on `cron` for the daily/weekly jobs. */
-export async function runScheduled(env: Env, deps: Deps, _cron: string): Promise<void> {
-  await promoteStalePending(env, deps);
-  await emailHealthAlerts(env, deps);
-  await refreshFx(env, deps);
+/** Cron expressions (wrangler.jsonc "triggers.crons"). UTC; SGT = UTC+8. */
+export const CRON_HOURLY = "0 * * * *";
+export const CRON_DAILY = "0 18 * * *"; // 02:00 SGT: recurring detection
+export const CRON_WEEKLY = "0 12 * * 0"; // Sunday 20:00 SGT: weekly digest
+
+/** Cron entry: dispatches on the trigger's own expression. */
+export async function runScheduled(env: Env, deps: Deps, cron: string): Promise<void> {
+  if (cron === CRON_WEEKLY) {
+    await sendWeeklyDigest(env, deps);
+  } else if (cron === CRON_DAILY) {
+    await runRecurringDetection(env, deps);
+  } else {
+    await promoteStalePending(env, deps);
+    await emailHealthAlerts(env, deps);
+    await refreshFx(env, deps);
+  }
 }

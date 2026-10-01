@@ -52,7 +52,7 @@ export function summarizeMonth(rows: SummaryRow[], month: string, now: string | 
     if (!inMonth && !inPrev) continue;
     if (!isSpend(r)) {
       // Display-only totals for groups that don't count as spend (e.g. Savings bar on Home).
-      if (inMonth && r.group_id && r.status !== "void" && !r.is_excluded && !r.is_reimbursable) bump(nonSpend, r.group_id, signedSgdMinor(r));
+      if (inMonth && r.group_id && !r.group_counts_as_spend && r.status !== "void" && !r.is_excluded && !r.is_reimbursable) bump(nonSpend, r.group_id, signedSgdMinor(r));
       continue;
     }
     const amt = signedSgdMinor(r);
@@ -91,4 +91,21 @@ export function billEstimate(rows: SummaryRow[]): number {
     t += signedSgdMinor(r);
   }
   return t;
+}
+
+export interface TripTotals { total: number; count: number; byCategory: BucketTotal[]; byGroup: BucketTotal[] }
+
+/** A trip's own spend: the spend definition WITHOUT the trip-exclusion rule (that rule only hides trips from monthly views). */
+export function tripTotals(rows: SummaryRow[]): TripTotals {
+  let total = 0, count = 0;
+  const cats = new Map<string, BucketTotal>();
+  const groups = new Map<string, BucketTotal>();
+  for (const r of rows) {
+    if (!isSpend(r, { ignoreTripExclusion: true })) continue;
+    const a = signedSgdMinor(r);
+    total += a; count++;
+    bump(cats, r.category_id ?? UNCATEGORISED, a);
+    bump(groups, r.group_id ?? UNCATEGORISED, a);
+  }
+  return { total, count, byCategory: [...cats.values()].sort((a, b) => b.spent - a.spent), byGroup: [...groups.values()].sort((a, b) => b.spent - a.spent) };
 }

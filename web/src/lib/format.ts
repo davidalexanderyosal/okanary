@@ -25,11 +25,7 @@ export function timeLabel(utcIso: string): string {
 
 export { addMonths };
 
-/** "SQ *YA KUN" is stored normalised ("YA KUN"); show it as "Ya Kun". */
-export function prettyMerchant(m: string | null | undefined): string {
-  if (!m) return "";
-  return m.toLowerCase().replace(/(^|[\s/&-])([a-z])/g, (_, a: string, b: string) => a + b.toUpperCase());
-}
+export { prettyMerchant } from "@okanary/core";
 
 /** '2026-09-12' -> '12 Sep' */
 export function shortDate(ymd: string): string {

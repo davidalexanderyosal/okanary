@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addMinor, allocate, convertMinor, currencyExponent, formatMoney, minorToDecimalString, parseMajorToMinor, percentOf } from "./money";
+import { addMinor, allocate, convertMinor, currencyExponent, formatMoney, formatMoneyShort, minorToDecimalString, parseMajorToMinor, percentOf } from "./money";
 
 describe("parseMajorToMinor", () => {
   it("parses without float error", () => {
@@ -79,4 +79,17 @@ describe("convertMinor", () => {
     expect(convertMinor(-1, "USD", "SGD", 1.5)).toBe(-2);
   });
   it("rejects bad rates", () => expect(() => convertMinor(100, "USD", "SGD", 0)).toThrow());
+});
+
+describe("formatMoneyShort", () => {
+  it("whole dollars from 10 up, cents below, rounding half up, JPY untouched", () => {
+    expect(formatMoneyShort(450)).toBe("S$4.50");
+    expect(formatMoneyShort(999)).toBe("S$9.99");
+    expect(formatMoneyShort(1000)).toBe("S$10");
+    expect(formatMoneyShort(9650)).toBe("S$97");
+    expect(formatMoneyShort(9649)).toBe("S$96");
+    expect(formatMoneyShort(121000)).toBe("S$1,210");
+    expect(formatMoneyShort(-12800)).toBe("-S$128");
+    expect(formatMoneyShort(1200, "JPY")).toBe("¥1,200");
+  });
 });

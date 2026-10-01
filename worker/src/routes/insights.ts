@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { addMonths, billEstimate, cycleBounds, sgtDate, sgtMonth, sumSpend, summarizeMonth, type SummaryRow } from "@okanary/core";
+import { addMonths, billEstimate, cycleBounds, sgtDate, sgtMonth, sumSpend, summarizeMonth, tripTotals, type SummaryRow } from "@okanary/core";
 import { TXN_WITH_GROUP_SQL, loadRowsBetween } from "../db";
 import type { AppEnv } from "../env";
 import { getSgdRate } from "../fx";
@@ -33,7 +33,7 @@ insights.get("/cycles", async (c) => {
 
 /** Monthly totals for the last N months (Lifestyle trend, spec §7.5). */
 insights.get("/trend", async (c) => {
-  const q = z.object({ months: z.coerce.number().int().min(1).max(24).default(6), group: z.string().default("lifestyle") }).safeParse(c.req.query());
+  const q = z.object({ months: z.coerce.number().int().min(1).max(24).default(6), group: z.string().default("lifestyle"), category: z.string().optional() }).safeParse(c.req.query());
   if (!q.success) return c.json({ error: "bad query" }, 400);
   const now = c.var.deps.now();
   const last = sgtMonth(now);
@@ -43,9 +43,10 @@ insights.get("/trend", async (c) => {
   for (let i = 0; i < q.data.months; i++) {
     const m = addMonths(first, i);
     const s = summarizeMonth(rows, m, now);
-    points.push({ month: m, group: s.byGroup.find((g) => g.id === q.data.group)?.spent ?? 0, total: s.total });
+    const spent = q.data.category ? s.byCategory.find((g) => g.id === q.data.category)?.spent ?? 0 : s.byGroup.find((g) => g.id === q.data.group)?.spent ?? 0;
+    points.push({ month: m, group: spent, total: s.total });
   }
-  return c.json({ group: q.data.group, points });
+  return c.json({ group: q.data.category ?? q.data.group, points });
 });
 
 /** Rate for 1 unit of `currency` in SGD (cached ECB via Frankfurter). */
@@ -65,7 +66,11 @@ const tripSchema = z.object({
   exclude_from_monthly: z.union([z.literal(0), z.literal(1), z.boolean()]).transform((v) => (v ? 1 : 0)).optional(),
 });
 
-insights.get("/trips", async (c) => c.json((await c.env.DB.prepare("SELECT * FROM trips ORDER BY start_date DESC, name").all()).results));
+insights.get("/trips", async (c) => {
+  const trips = (await c.env.DB.prepare("SELECT * FROM trips ORDER BY start_date DESC, name").all<{ id: string }>()).results;
+  const rows = (await c.env.DB.prepare(`${TXN_WITH_GROUP_SQL} WHERE t.trip_id IS NOT NULL`).all<SummaryRow & { trip_id: string }>()).results;
+  return c.json(trips.map((t) => { const x = tripTotals(rows.filter((r) => r.trip_id === t.id)); return { ...t, spent_sgd_minor: x.total, count: x.count }; }));
+});
 insights.get("/trips/active", async (c) => c.json(await tripCovering(c.env.DB, c.var.deps.now())));
 insights.post("/trips", async (c) => {
   const p = tripSchema.safeParse(await c.req.json().catch(() => null));

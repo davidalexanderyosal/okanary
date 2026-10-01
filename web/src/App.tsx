@@ -5,10 +5,12 @@ import { ToastProvider } from "./components/Toast";
 import { useRefData } from "./lib/refdata";
 import { Home } from "./pages/Home";
 import { Budgets } from "./pages/Budgets";
+import { Import } from "./pages/Import";
 import { Raw } from "./pages/Raw";
 import { Review } from "./pages/Review";
 import { Settings } from "./pages/Settings";
 import { Setup } from "./pages/Setup";
+import { Subscriptions } from "./pages/Subscriptions";
 import { Transactions } from "./pages/Transactions";
 
 const Reports = lazy(() => import("./pages/Reports").then((m) => ({ default: m.Reports })));
@@ -41,6 +43,8 @@ function Shell() {
           <Route path="/setup" element={<Setup />} />
           <Route path="/review" element={<Review />} />
           <Route path="/raw" element={<Raw />} />
+          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/import" element={<Import />} />
         </Routes>
       </main>
 

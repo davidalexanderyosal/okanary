@@ -10,3 +10,13 @@ export async function tripCovering(db: D1Database, instant: string | Date): Prom
     .bind(d)
     .first<TripRow>();
 }
+
+/** In-memory lookup for bulk paths (statement import): the trip covering an SGT calendar date 'YYYY-MM-DD'. */
+export function tripForDate(trips: Pick<TripRow, "id" | "start_date" | "end_date">[], date: string): string | null {
+  let best: (typeof trips)[number] | null = null;
+  for (const t of trips) {
+    if (!t.start_date || t.start_date > date || (t.end_date && t.end_date < date)) continue;
+    if (!best || t.start_date > best.start_date!) best = t;
+  }
+  return best?.id ?? null;
+}
