@@ -1,32 +1,80 @@
+@import "@fontsource/m-plus-rounded-1c/latin-500.css";
+@import "@fontsource/m-plus-rounded-1c/latin-700.css";
+@import "@fontsource/m-plus-rounded-1c/latin-800.css";
+@import "@fontsource/share-tech-mono/latin-400.css";
 @import "tailwindcss";
 
+/*
+ * Konbini Clay: receipt-paper cards on a sky-to-cream page, lilac / peach / mint / sunshine accents.
+ * Token names are unchanged from the old theme so every page picks the new look up automatically.
+ *   --bg      recessed surface inside a card (fields, keys, unselected chips)
+ *   --card    receipt paper
+ *   --accent  lilac: links, selected chips, secondary buttons
+ *   --sun     sunshine: the primary action (+, Save)
+ */
 :root {
   color-scheme: light dark;
-  --bg: #f4f5f7;
-  --card: #ffffff;
-  --fg: #0f172a;
-  --muted: #64748b;
-  --line: #e2e8f0;
-  --accent: #2563eb;
+  --page-top: #cfe6ff;
+  --page-bottom: #fff0cf;
+  --dot: rgb(255 255 255 / 0.8);
+  --bg: #e9f1fc;
+  --card: #fffdf6;
+  --fg: #2b3350;
+  --muted: #58648f;
+  --line: #dce6f5;
+  --edge: #b8ccea;
+  --accent: #5a44c2;
   --accent-fg: #ffffff;
-  --lifestyle: #f59e0b;
-  --essentials: #0ea5e9;
-  --savings: #10b981;
-  --danger: #dc2626;
+  --lilac: #c4b5fd;
+  --sun: #ffd54a;
+  --sun-fg: #6b4600;
+  --sun-edge: #e3ae1c;
+  --lifestyle: #ffd54a;
+  --lifestyle-ink: #9a6400;
+  --essentials: #8ccbff;
+  --savings: #7fddb4;
+  --good: #14895f;
+  --peach: #ffb48a;
+  --danger: #d63a3f;
+  --stamp: #ee6a45;
+  --mint-bg: #e4f8ee;
+  --mint-line: #9be3c4;
+  --pill: #fff1b8;
+  --coin-top: #ffe98f;
+  --coin-bottom: #e8b02e;
+  --coin-edge: #b9851b;
+  --tint-sky: #2f7fcb;
+  --tint-peach: #d2622e;
+  --tint-mint: #14895f;
+  --tint-lilac: #5a44c2;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #020617;
-    --card: #0f172a;
-    --fg: #f1f5f9;
-    --muted: #94a3b8;
-    --line: #1e293b;
-    --accent: #60a5fa;
-    --accent-fg: #0b1220;
-    --lifestyle: #fbbf24;
-    --essentials: #38bdf8;
-    --savings: #34d399;
-    --danger: #f87171;
+    --page-top: #1b2247;
+    --page-bottom: #2d2760;
+    --dot: rgb(255 255 255 / 0.07);
+    --bg: #1c2350;
+    --card: #252d5a;
+    --fg: #f1f3ff;
+    --muted: #a3acd6;
+    --line: #38427a;
+    --edge: #141935;
+    --accent: #cfc4ff;
+    --accent-fg: #2b2260;
+    --lilac: #c4b5fd;
+    --sun: #ffd54a;
+    --sun-fg: #5a3a00;
+    --lifestyle-ink: #ffe08a;
+    --good: #5fe0ae;
+    --danger: #ff8a7a;
+    --stamp: #ff8a66;
+    --mint-bg: rgb(127 221 180 / 0.14);
+    --mint-line: rgb(127 221 180 / 0.45);
+    --pill: rgb(255 213 74 / 0.18);
+    --tint-sky: #8ccbff;
+    --tint-peach: #ffb48a;
+    --tint-mint: #7fddb4;
+    --tint-lilac: #d2c8ff;
   }
 }
 
@@ -36,29 +84,80 @@
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-edge: var(--edge);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-lilac: var(--lilac);
+  --color-sun: var(--sun);
+  --color-sun-fg: var(--sun-fg);
   --color-lifestyle: var(--lifestyle);
+  --color-lifestyle-ink: var(--lifestyle-ink);
   --color-essentials: var(--essentials);
   --color-savings: var(--savings);
+  --color-good: var(--good);
+  --color-peach: var(--peach);
   --color-danger: var(--danger);
+  --color-stamp: var(--stamp);
+  --color-mint-bg: var(--mint-bg);
+  --color-mint-line: var(--mint-line);
+  --color-pill: var(--pill);
+  --font-sans: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", ui-rounded, system-ui, sans-serif;
+  --font-mono: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Cards sit on a hard "paper edge" instead of a blurry shadow. */
+  --shadow-sm: 0 3px 0 var(--edge);
+  --shadow-xl: 0 4px 0 var(--sun-edge), 0 12px 24px -8px rgb(60 80 140 / 0.45);
 }
 
 html, body, #root { height: 100%; }
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--page-top);
   color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-family: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", ui-rounded, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
-button { font: inherit; color: inherit; touch-action: manipulation; }
-input, select, textarea { font: inherit; font-size: 16px; /* >=16px stops iOS focus-zoom */ }
+/* Fixed sky-to-cream page with white dots, behind everything (a fixed layer avoids iOS background-attachment bugs). */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(var(--dot) 1.6px, transparent 1.8px) 0 0 / 16px 16px, linear-gradient(180deg, var(--page-top), var(--page-bottom));
+}
+/* In the base layer so Tailwind utilities (text-accent-fg, text-muted...) still win on buttons. */
+@layer base {
+  button { font: inherit; color: inherit; touch-action: manipulation; }
+  input, select, textarea { font: inherit; font-size: 16px; /* >=16px stops iOS focus-zoom */ }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
 
 /* Safe-area helpers for standalone iPhone PWA (notch / home indicator). */
 .pt-safe { padding-top: env(safe-area-inset-top); }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .tap { min-height: 44px; min-width: 44px; }
-.num { font-variant-numeric: tabular-nums; }
+
+/* Amounts read like a till receipt. Unlayered, so it wins over font-weight utilities (the face has one weight). */
+.num { font-family: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; font-weight: 400; letter-spacing: -0.01em; }
+/* The one big headline figure keeps the rounded face. */
+.big-num { font-variant-numeric: tabular-nums; font-weight: 800; letter-spacing: -0.02em; }
+
+/* Receipt paper with a torn bottom edge. */
+.receipt { position: relative; border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 8px; }
+.receipt::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -7px;
+  height: 7px;
+  background: var(--card);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='7'%3E%3Cpath d='M0 0h14L7 7z'/%3E%3C/svg%3E") repeat-x 0 0 / 14px 7px;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='7'%3E%3Cpath d='M0 0h14L7 7z'/%3E%3C/svg%3E") repeat-x 0 0 / 14px 7px;
+}
+
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: no-preference) {
+  .bob { animation: bob 2.6s ease-in-out infinite; }
+}

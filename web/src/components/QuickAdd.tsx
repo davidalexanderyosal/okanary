@@ -92,11 +92,11 @@ export function QuickAdd({ open, onClose, groups, categories, usage, accounts }:
   return (
     <Sheet open={open} onClose={onClose} title="Add expense">
       <div className="px-4 pb-3 pt-1">
-        <div className="num flex items-baseline justify-center gap-2 pt-3 text-5xl font-semibold tracking-tight" aria-live="polite">
+        <div className="num mt-1 flex items-baseline justify-center gap-2 rounded-[20px] bg-bg pt-3 text-5xl tracking-tight shadow-[0_3px_0_var(--edge)]" aria-live="polite">
           <button className="tap rounded-xl text-2xl text-muted underline decoration-dotted underline-offset-4" onClick={() => setPickCur((p) => !p)} aria-label={`Currency ${currency}, tap to change`}>{currencySymbol(currency).trim()}</button>
           <span className={amount === "" ? "text-muted" : ""}>{displayTyped(amount)}</span>
         </div>
-        <p className="h-6 text-center text-sm text-muted">
+        <p className="num mt-1 h-6 text-center text-sm text-muted">
           {estimate !== null ? `≈ ${formatMoney(estimate, "SGD")}${rate ? ` at ${rate.rate}` : ""}` : currency !== "SGD" && minor > 0 && !rate ? "Rate unavailable: enter the SGD amount under More" : ""}
         </p>
         {pickCur && (
@@ -116,7 +116,7 @@ export function QuickAdd({ open, onClose, groups, categories, usage, accounts }:
               key={c.id}
               disabled={disabled || busy}
               onClick={() => onChip(c.id)}
-              className={`tap flex items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition active:scale-95 disabled:opacity-40 ${cat === c.id ? "border-accent bg-accent text-accent-fg" : "border-line bg-bg"}`}
+              className={`tap flex items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition active:scale-95 disabled:opacity-40 ${cat === c.id ? "border-accent bg-accent text-accent-fg" : "border-dashed border-lilac bg-card"}`}
             >
               <span className="h-2 w-2 rounded-full" style={{ background: groupColor(c.group_id) }} />
               {c.name}
@@ -147,7 +147,7 @@ export function QuickAdd({ open, onClose, groups, categories, usage, accounts }:
                 <label key={label} className="tap flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={v} onChange={(e) => set(e.target.checked)} />{label}</label>
               ))}
             </div>
-            <button disabled={disabled || busy} onClick={() => void save(cat)} className="tap w-full rounded-xl bg-accent font-semibold text-accent-fg disabled:opacity-40">
+            <button disabled={disabled || busy} onClick={() => void save(cat)} className="tap w-full rounded-full bg-sun font-extrabold text-sun-fg shadow-[0_3px_0_var(--sun-edge)] active:translate-y-[3px] active:shadow-none disabled:opacity-40">
               Save{cat ? "" : " (uncategorised)"}
             </button>
           </div>
@@ -156,7 +156,7 @@ export function QuickAdd({ open, onClose, groups, categories, usage, accounts }:
         <div className="grid grid-cols-3 gap-2">
           {KEYS.map((k) => (
             <button key={k} onClick={() => { navigator.vibrate?.(4); setAmount((s) => pressKey(s, k, currency)); }} onDoubleClick={() => k === "back" && setAmount("")}
-              className="tap h-[52px] rounded-2xl bg-bg text-2xl font-medium active:bg-line" aria-label={k === "back" ? "Backspace" : k}>
+              className="tap num h-[52px] rounded-2xl bg-bg text-2xl shadow-[0_3px_0_var(--edge)] active:translate-y-[3px] active:shadow-none" aria-label={k === "back" ? "Backspace" : k}>
               {k === "back" ? "⌫" : k}
             </button>
           ))}

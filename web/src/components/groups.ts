@@ -2,7 +2,7 @@ export const GROUP_COLOR: Record<string, string> = {
   essentials: "var(--essentials)",
   lifestyle: "var(--lifestyle)",
   savings: "var(--savings)",
-  income: "#8b5cf6",
+  income: "var(--lilac)",
   transfers: "var(--muted)",
   uncategorised: "var(--muted)",
 };

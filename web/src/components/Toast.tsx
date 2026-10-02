@@ -16,7 +16,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={show}>
       {children}
       {t && (
-        <div className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-4" style={{ bottom: "calc(env(safe-area-inset-bottom) + 156px)" }}>
+        <div className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-4" style={{ bottom: "calc(env(safe-area-inset-bottom) + 104px)" }}>
           <div className="pointer-events-auto flex min-h-11 items-center gap-3 rounded-full bg-fg px-5 text-sm text-bg shadow-lg" role="status">
             <span>{t.msg}</span>
             {t.action && (

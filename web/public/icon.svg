@@ -1,1 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0f172a"/><g transform="translate(256 270)"><ellipse cx="0" cy="20" rx="132" ry="118" fill="#facc15"/><circle cx="62" cy="-78" r="64" fill="#facc15"/><path d="M118 -86 L186 -64 L120 -48 Z" fill="#f97316"/><circle cx="78" cy="-90" r="10" fill="#0f172a"/><path d="M-120 60 Q-190 90 -168 150 Q-110 120 -84 80 Z" fill="#eab308"/><text x="-10" y="48" font-family="Arial,Helvetica,sans-serif" font-size="110" font-weight="700" fill="#0f172a" text-anchor="middle">$</text></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#CFE6FF"/><stop offset="1" stop-color="#FFF0CF"/></linearGradient>
+    <radialGradient id="coin" cx=".5" cy=".3" r=".8"><stop offset="0" stop-color="#FFE98F"/><stop offset="1" stop-color="#E8B02E"/></radialGradient>
+    <pattern id="dots" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="16" cy="16" r="3.2" fill="#fff" opacity=".8"/></pattern>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#dots)"/>
+  <ellipse cx="256" cy="394" rx="130" ry="34" fill="#B9851B"/>
+  <ellipse cx="256" cy="384" rx="130" ry="34" fill="url(#coin)"/>
+  <g transform="translate(86 62) scale(3.4)">
+    <path d="M26 56 L4 74 L10 50 Z" fill="#FFB43A"/>
+    <ellipse cx="50" cy="58" rx="30" ry="26" fill="#FFD54A"/>
+    <circle cx="62" cy="34" r="18" fill="#FFD54A"/>
+    <path d="M30 56 Q44 43 60 57 Q47 77 30 56Z" fill="#FFB43A"/>
+    <path d="M77 28 L94 36 L77 43 Z" fill="#FF9A62"/>
+    <circle cx="68" cy="30" r="3.2" fill="#2B3350"/>
+    <ellipse cx="71" cy="41" rx="5.5" ry="3.6" fill="#FFA58A" opacity=".65"/>
+    <path d="M43 83V92M58 83V92M38 92H47M53 92H62" stroke="#E8933A" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>
