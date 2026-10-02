@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useResource } from "../lib/data";
 
-const BADGE: Record<string, string> = { ok: "text-savings", failed: "text-danger", received: "text-muted", dismissed: "text-muted" };
+const BADGE: Record<string, string> = { ok: "text-good", failed: "text-danger", received: "text-muted", dismissed: "text-muted" };
 
 /** Everything that ever arrived by Apple Pay or email, parsed or not (spec §4.2: nothing is ever dropped). */
 export function Raw() {

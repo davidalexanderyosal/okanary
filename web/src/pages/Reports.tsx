@@ -133,7 +133,7 @@ function Delta({ now, prev }: { now: number; prev: number }) {
   if (prev === 0 && now === 0) return <span className="text-muted">–</span>;
   if (prev === 0) return <span className="text-muted">new</span>;
   const pct = Math.round(((now - prev) * 100) / prev);
-  return <span className={pct > 0 ? "text-danger" : "text-savings"}>{pct > 0 ? "▲" : pct < 0 ? "▼" : ""} {Math.abs(pct)}%</span>;
+  return <span className={pct > 0 ? "text-danger" : "text-good"}>{pct > 0 ? "▲" : pct < 0 ? "▼" : ""} {Math.abs(pct)}%</span>;
 }
 
 /** Month-over-month per group/category plus a 6-month trend for any one of them (spec §3.2). */

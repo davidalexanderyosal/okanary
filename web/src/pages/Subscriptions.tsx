@@ -34,7 +34,7 @@ export function Subscriptions() {
             </div>
             <div className="mt-2 flex gap-2">
               {s.confirmed_by_user ? (
-                <span className="tap flex items-center text-sm font-medium text-savings">✓ Confirmed</span>
+                <span className="tap flex items-center text-sm font-medium text-good">✓ Confirmed</span>
               ) : (
                 <button className="tap flex-1 rounded-xl bg-accent font-semibold text-accent-fg" onClick={() => void api.confirmSubscription(s.id).then(invalidateAll)}>Yes, it's a subscription</button>
               )}

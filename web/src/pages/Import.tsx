@@ -63,7 +63,7 @@ export function Import() {
 
           {res.to_add.length > 0 && <h3 className="pt-3 text-xs font-semibold uppercase tracking-wide text-muted">Missing: will be added</h3>}
           {res.to_add.map((r, i) => (
-            <p key={i} className={row}><span className="min-w-0 truncate">{shortDate(r.date)} · {r.description}</span><span className={`num shrink-0 ${r.amount < 0 ? "text-savings" : ""}`}>{r.amount < 0 ? "+" : ""}{sgd(Math.abs(r.amount))}</span></p>
+            <p key={i} className={row}><span className="min-w-0 truncate">{shortDate(r.date)} · {r.description}</span><span className={`num shrink-0 ${r.amount < 0 ? "text-good" : ""}`}>{r.amount < 0 ? "+" : ""}{sgd(Math.abs(r.amount))}</span></p>
           ))}
 
           {res.not_on_statement.length > 0 && <h3 className="pt-3 text-xs font-semibold uppercase tracking-wide text-muted">In Okanary but not on this statement (kept)</h3>}
@@ -74,7 +74,7 @@ export function Import() {
           {!res.applied && (res.to_add.length > 0 || res.matched.length > 0) && (
             <button disabled={busy} onClick={() => void go(true)} className="tap mt-4 w-full rounded-xl bg-accent font-semibold text-accent-fg disabled:opacity-40">Apply these changes</button>
           )}
-          {res.applied && <p className="pt-3 text-sm font-medium text-savings">Done: {res.applied.added} added, {res.applied.corrected} corrected, {res.applied.confirmed} confirmed.</p>}
+          {res.applied && <p className="pt-3 text-sm font-medium text-good">Done: {res.applied.added} added, {res.applied.corrected} corrected, {res.applied.confirmed} confirmed.</p>}
         </section>
       )}
     </div>
