@@ -14,8 +14,8 @@
     {
       "binding": "DB",
       "database_name": "okanary",
-      // Replace with the id printed by `npx wrangler d1 create okanary`. Local dev works with this placeholder.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // Created in your Cloudflare account (APAC); migrations 0001-0003 already applied remotely.
+      "database_id": "a3e2fb0b-e124-442f-9260-331f73eba9ae",
       "migrations_dir": "worker/migrations"
     }
   ],
