@@ -3,7 +3,7 @@ import { z } from "zod";
 import { normalizeMerchant } from "@okanary/core";
 import type { AppEnv } from "../env";
 import { mergeDuplicatePair } from "../capture";
-import { REVIEW_WHERE, TXN_WITH_GROUP_SQL } from "../db";
+import { RAW_REVIEW_WHERE, REVIEW_WHERE, TXN_WITH_GROUP_SQL } from "../db";
 import { ulid } from "../util";
 
 export const review = new Hono<AppEnv>();
@@ -11,7 +11,7 @@ export const review = new Hono<AppEnv>();
 review.get("/review", async (c) => {
   const items = (await c.env.DB.prepare(`${TXN_WITH_GROUP_SQL} WHERE ${REVIEW_WHERE} ORDER BY t.occurred_at DESC LIMIT 200`).all()).results;
   const failed = (
-    await c.env.DB.prepare("SELECT id, source, received_at, payload, error FROM raw_ingest WHERE parse_status = 'failed' AND transaction_id IS NULL ORDER BY received_at DESC LIMIT 50").all()
+    await c.env.DB.prepare(`SELECT id, source, received_at, payload, error FROM raw_ingest WHERE ${RAW_REVIEW_WHERE} ORDER BY received_at DESC LIMIT 50`).all()
   ).results;
   const cands = (await c.env.DB.prepare("SELECT id, txn_id, other_id, created_at FROM duplicate_candidates WHERE resolved = 0 ORDER BY created_at DESC LIMIT 50").all<{ id: string; txn_id: string; other_id: string }>()).results;
   const duplicates = [];
@@ -44,7 +44,7 @@ review.get("/raw-ingest/:id", async (c) => {
 });
 
 review.post("/raw-ingest/:id/dismiss", async (c) => {
-  const r = await c.env.DB.prepare("UPDATE raw_ingest SET parse_status = 'dismissed' WHERE id = ? AND parse_status = 'failed'").bind(c.req.param("id")).run();
+  const r = await c.env.DB.prepare("UPDATE raw_ingest SET parse_status = 'dismissed' WHERE id = ? AND parse_status IN ('failed','review')").bind(c.req.param("id")).run();
   return r.meta.changes ? c.json({ ok: true }) : c.json({ error: "not found" }, 404);
 });
 

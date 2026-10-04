@@ -1,4 +1,4 @@
-import type { Account, Breakdown, BudgetRow, CardLiability, FundingType, GoalKind, GoalState, GoalStatus, Horizon, NwKind, Category, CategoryGroup, MonthSummary, Transaction, UsualResult, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
+import type { Account, CatalogueItem, Cycle, SubStatus, Breakdown, BudgetRow, CardLiability, FundingType, GoalKind, GoalState, GoalStatus, Horizon, NwKind, Category, CategoryGroup, MonthSummary, Transaction, UsualResult, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
 
 export type TxnRowData = Transaction & { group_id: string | null; group_counts_as_spend: number | null };
 export type Summary = MonthSummary & { reviewCount: number; budgets: BudgetRow[] };
@@ -24,7 +24,24 @@ export interface NewTxn {
 export interface RuleRow { id: string; match_type: string; pattern: string; category_id: string | null; category_name: string | null; set_excluded: number; priority: number; hits: number }
 export interface FailedRaw { id: string; source: string; received_at: string; payload: string | null; error: string | null }
 export interface Trip { id: string; name: string; start_date: string | null; end_date: string | null; exclude_from_monthly: number; currency: string | null; spent_sgd_minor?: number; count?: number }
-export interface Subscription { id: string; merchant: string; expected_amount_sgd_minor: number | null; cadence: string | null; next_expected: string | null; category_id: string | null; active: number; confirmed_by_user: number }
+export type SubscriptionSource = "detected" | "manual" | "apple_receipt" | "email_receipt";
+/** One row of GET /api/subscriptions (v2 S): the table row plus derived numbers, flags and the cost in goal terms. All SGD amounts are minor units. */
+export interface SubscriptionItem {
+  id: string; name: string; catalogue_key: string | null; amount_minor: number | null; currency: string; expected_sgd_minor: number; cycle: Cycle;
+  next_renewal: string | null; account_id: string | null; category_id: string | null; source: SubscriptionSource; status: SubStatus;
+  trial_ends: string | null; merchant_pattern: string | null; last_charged: string | null; pending_price_sgd_minor: number | null; group_id: string | null;
+  monthly_equivalent: number; yearly_equivalent: number;
+  flags: { missing: boolean; price_change: boolean; trial_ending: boolean; renewal_soon: boolean };
+  cancel_url: string | null;
+  goal_impact: { goal_id: string; goal_name: string; weeks_earlier: number | null; reachable_only_if_cancelled: boolean; text: string } | null;
+}
+export interface SubscriptionTotals { monthly: number; yearly: number; essentials: number; lifestyle: number; count: number }
+export interface SubscriptionsResponse { items: SubscriptionItem[]; totals: SubscriptionTotals; catalogue: CatalogueItem[] }
+/** POST/PATCH body for a subscription (money in minor units; the API converts a foreign price to SGD). */
+export interface SubscriptionInput {
+  name?: string; catalogue_key?: string | null; amount_minor?: number; currency?: string; cycle?: Cycle; next_renewal?: string;
+  account_id?: string | null; category_id?: string | null; trial_ends?: string | null; status?: SubStatus;
+}
 export interface ImportResult {
   mode: "csv" | "text"; skipped: number; existing_in_window: number;
   applied: { corrected: number; confirmed: number; added: number } | null;
@@ -208,10 +225,18 @@ export const api = {
   copyBudgets: (from: string, to: string) => req<{ copied: number; budgets: BudgetRow[] }>("/api/budgets/copy", body("POST", { from, to })),
   cycles: () => req<{ today: string; cycles: CycleInfo[] }>("/api/cycles"),
   trend: (months = 6, group = "lifestyle", category?: string) => req<{ group: string; points: { month: string; group: number; total: number }[] }>(`/api/trend?months=${months}&group=${group}${category ? `&category=${category}` : ""}`),
-  subscriptions: () => req<{ items: Subscription[]; monthly_total: number; confirmed_total: number }>("/api/subscriptions"),
+  subscriptions: () => req<SubscriptionsResponse>("/api/subscriptions"),
   detectSubscriptions: () => req<{ added: number; updated: number }>("/api/subscriptions/detect", { method: "POST" }),
+  createSubscription: (input: SubscriptionInput) => req<SubscriptionItem & { merged: boolean }>("/api/subscriptions", body("POST", input)),
+  patchSubscription: (id: string, input: SubscriptionInput) => req<SubscriptionItem>(`/api/subscriptions/${id}`, body("PATCH", input)),
   confirmSubscription: (id: string) => req<{ ok: true }>(`/api/subscriptions/${id}/confirm`, { method: "POST" }),
   dismissSubscription: (id: string) => req<{ ok: true }>(`/api/subscriptions/${id}/dismiss`, { method: "POST" }),
+  acceptSubscriptionPrice: (id: string) => req<{ ok: true }>(`/api/subscriptions/${id}/accept-price`, { method: "POST" }),
+  reviewSubscriptionPrice: (id: string) => req<{ ok: true }>(`/api/subscriptions/${id}/review-price`, { method: "POST" }),
+  cancelIntentSubscription: (id: string) => req<{ ok: true; cancel_url: string | null }>(`/api/subscriptions/${id}/cancel-intent`, { method: "POST" }),
+  markSubscriptionCancelled: (id: string) => req<{ ok: true }>(`/api/subscriptions/${id}/cancelled`, { method: "POST" }),
+  keepSubscription: (id: string) => req<{ ok: true }>(`/api/subscriptions/${id}/keep`, { method: "POST" }),
+  remindSubscriptionLater: (id: string) => req<{ ok: true }>(`/api/subscriptions/${id}/remind-later`, { method: "POST" }),
   importStatement: (b: { account_id: string; text: string; commit: boolean }) => req<ImportResult>("/api/import/statement", body("POST", b)),
   fx: (currency: string) => req<{ currency: string; rate: number; date: string }>(`/api/fx/${currency}`),
   trips: () => req<Trip[]>("/api/trips"),

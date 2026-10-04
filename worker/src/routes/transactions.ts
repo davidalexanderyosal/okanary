@@ -3,6 +3,7 @@ import { z } from "zod";
 import { convertMinor, monthRangeUtc, normalizeMerchant, type Transaction } from "@okanary/core";
 import { runAlertsInBackground } from "../alerts";
 import { getSgdRate } from "../fx";
+import { onChargeRecorded } from "../subscriptions";
 import { tripCovering } from "../trips";
 import type { AppEnv } from "../env";
 import { getTransaction, TXN_WITH_GROUP_SQL } from "../db";
@@ -103,6 +104,8 @@ transactions.post("/", async (c) => {
       merchantRaw, merchant, d.category_id ?? null, d.category_id ? "user" : null,
       d.is_refund ?? 0, d.is_reimbursable ?? 0, d.is_excluded ?? 0, d.note ?? null, tripId, now, now)
     .run();
+  const created = (await getTransaction(c.env.DB, id))!;
+  await onChargeRecorded(c.env, deps, created); // v2 S: link to a subscription, price-change check (never throws)
   await alertsAfterWrite(c);
   return c.json(await getTransaction(c.env.DB, id), 201);
 });

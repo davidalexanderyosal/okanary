@@ -384,6 +384,10 @@ Built in the order A → U → N → G → W → S → P; mapping and conflicts 
 - "Want, not buy" (Quick add and Home) adds an item with a wait of 3 / 7 (default) / 30 days or custom; 30 by default above S$200. When the wait ends the item becomes Ready and one batched push asks "Still want AirPods case (S$59)? Buy / Skip" (counts toward the nudge limit).
 - Skip → optional pledge of the price to the receiving goal; Buy → optional link to a matching transaction (±10%, 14 days); an early buy is recorded without comment. "Not bought this year: S$412 (9 items)" on Home and Reports.
 
+### 13.S Subscriptions hub (built)
+- One `subscriptions` table (Phase 5 `recurring` migrated in place). Ways in: detection (2 consecutive monthly charges ±15% → candidate + one push), manual add with a catalogue, Apple receipts (UNVERIFIED parser labels APPLE.COM/BILL charges), other receipts via AI → Review inbox, free trials (reminder 2 days before the end).
+- Monthly/yearly equivalents and totals (Essentials vs Lifestyle); annual renewals get a reminder 7 days before and a monthly set-aside in the plan; price-change alerts (> max(2%, S$0.50), +3% for foreign currency) with Accept / Review; missing charge flag (> 7 days late, no push); quarterly "Still using?" batched push; cost in goal terms ("Cancelling moves 'Japan trip' 3 weeks earlier"). Okanary records the intent to cancel and opens the service's page; it never cancels anything.
+
 ## Sources
 
 - [Apple Pay expense tracking with Shortcuts Wallet automation — CashJot](https://www.cashjot.com/blog/apple-pay-expense-tracking)

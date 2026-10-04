@@ -5,9 +5,10 @@ import { sendWeeklyDigest } from "./digest";
 import { getSgdRate } from "./fx";
 import { runUnderspendPledges, underspendDue } from "./goals";
 import { hasSnapshot, runNetworthJob, symbolsMissingFreshQuote } from "./networth-job";
+import { rematchAppleReceipts } from "./receipts";
 import { sendMonthlySummary } from "./networth-summary";
 import { flushOutbox, sendNudge } from "./nudge-gate";
-import { runRecurringDetection } from "./recurring";
+import { runMissingCharges, runRenewalReminders, runSubscriptionDetection, runTrialReminders, runUsageCheck } from "./subscriptions";
 import { tripCovering } from "./trips";
 import { nowIso, ulid } from "./util";
 import { runWantsReady } from "./wants";
@@ -53,7 +54,7 @@ export async function refreshFx(env: Env, deps: Deps): Promise<string[]> {
 
 /** Cron expressions (wrangler.jsonc "triggers.crons"). UTC; SGT = UTC+8. */
 export const CRON_HOURLY = "0 * * * *";
-export const CRON_DAILY = "0 18 * * *"; // 02:00 SGT: recurring detection
+export const CRON_DAILY = "0 18 * * *"; // 02:00 SGT: subscription detection + reminders
 export const CRON_WEEKLY = "0 12 * * 0"; // Sunday 20:00 SGT: weekly digest
 export const CRON_NETWORTH = "30 22 * * *"; // 06:30 SGT (after the US close): net worth prices + daily snapshot
 
@@ -79,7 +80,15 @@ export async function runScheduled(env: Env, deps: Deps, cron: string): Promise<
   if (cron === CRON_WEEKLY) {
     await sendWeeklyDigest(env, deps);
   } else if (cron === CRON_DAILY) {
-    await runRecurringDetection(env, deps);
+    // Subscriptions (v2 S): each step is isolated. Pushes go through the nudge gate, so a 02:00 run is delivered at 08:00.
+    const log = (what: string) => (e: unknown) => console.error(`${what} failed`, (e as Error).message);
+    await runSubscriptionDetection(env, deps).catch(log("subscription detection"));
+    await runTrialReminders(env, deps).catch(log("trial reminders"));
+    await runRenewalReminders(env, deps).catch(log("renewal reminders"));
+    await runMissingCharges(env, deps).catch(log("missing charges"));
+    await runUsageCheck(env, deps).catch(log("usage check"));
+    // Apple receipts that arrived before their card charge: try the match again (last 10 days).
+    await rematchAppleReceipts(env, deps).catch(log("apple receipt rematch"));
   } else if (cron === CRON_NETWORTH) {
     await runNetworthJob(env, deps);
   } else {

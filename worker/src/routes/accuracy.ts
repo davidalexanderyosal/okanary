@@ -4,31 +4,10 @@ import { minorToDecimalString, sgtDate, sgtParts, tripTotals, toCsv, type Summar
 import { runAlertsInBackground } from "../alerts";
 import { TXN_WITH_GROUP_SQL } from "../db";
 import type { AppEnv } from "../env";
-import { runRecurringDetection } from "../recurring";
 import { importStatement } from "../statement-import";
 import { dayRangeUtc } from "@okanary/core";
 
 export const accuracy = new Hono<AppEnv>();
-
-// ---------- subscriptions ----------
-interface RecurringOut { id: string; merchant: string; expected_amount_sgd_minor: number | null; cadence: string | null; next_expected: string | null; category_id: string | null; active: number; confirmed_by_user: number }
-
-accuracy.get("/subscriptions", async (c) => {
-  const items = (await c.env.DB.prepare("SELECT * FROM recurring WHERE active = 1 ORDER BY expected_amount_sgd_minor DESC, merchant").all<RecurringOut>()).results;
-  const total = items.reduce((a, r) => a + (r.expected_amount_sgd_minor ?? 0), 0);
-  const confirmed = items.filter((r) => r.confirmed_by_user).reduce((a, r) => a + (r.expected_amount_sgd_minor ?? 0), 0);
-  return c.json({ items, monthly_total: total, confirmed_total: confirmed });
-});
-accuracy.post("/subscriptions/detect", async (c) => c.json(await runRecurringDetection(c.env, c.var.deps)));
-accuracy.post("/subscriptions/:id/confirm", async (c) => {
-  const r = await c.env.DB.prepare("UPDATE recurring SET confirmed_by_user = 1, active = 1 WHERE id = ?").bind(c.req.param("id")).run();
-  return r.meta.changes ? c.json({ ok: true }) : c.json({ error: "not found" }, 404);
-});
-accuracy.post("/subscriptions/:id/dismiss", async (c) => {
-  const r = await c.env.DB.prepare("UPDATE recurring SET active = 0 WHERE id = ?").bind(c.req.param("id")).run();
-  if (r.meta.changes) await c.env.DB.prepare("UPDATE transactions SET recurring_id = NULL WHERE recurring_id = ?").bind(c.req.param("id")).run();
-  return r.meta.changes ? c.json({ ok: true }) : c.json({ error: "not found" }, 404);
-});
 
 // ---------- CSV export ----------
 accuracy.get("/export/transactions.csv", async (c) => {

@@ -18,7 +18,8 @@ export interface RecurringCandidate {
   category_id: string | null;
 }
 
-export const MIN_OCCURRENCES = 3;
+/** v2 S: a candidate needs 2 consecutive monthly charges (gap 25–36 days, amounts within ±15%) (D-64). */
+export const MIN_OCCURRENCES = 2;
 const MIN_GAP = 25;
 const MAX_GAP = 36;
 const STALE_AFTER_DAYS = 45;
@@ -48,7 +49,7 @@ const similarAmount = (a: number, ref: number) => Math.abs(a - ref) <= Math.max(
 
 /**
  * `rows` must already be spend rows (spend definition applied, refunds removed). Finds merchants whose MOST RECENT run of
- * charges is ≥3 long with ~monthly gaps and similar amounts, and whose last charge is recent (a cancelled service goes quiet).
+ * charges is ≥2 long with ~monthly gaps and similar amounts, and whose last charge is recent (a cancelled service goes quiet).
  */
 export function detectMonthly(rows: RecurringTxn[], now: string | Date): RecurringCandidate[] {
   const today = sgtDate(now);

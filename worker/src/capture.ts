@@ -6,6 +6,7 @@ import type { Env } from "./env";
 import { loadWeekAllowance } from "./allowance";
 import { getSgdRate } from "./fx";
 import { sendPushToAll } from "./push";
+import { onChargeRecorded } from "./subscriptions";
 import { getSetting } from "./settings";
 import { tripCovering } from "./trips";
 import { nowIso, ulid } from "./util";
@@ -102,7 +103,8 @@ export async function captureTransaction(env: Env, deps: Deps, input: CaptureInp
     await env.DB.prepare("INSERT INTO duplicate_candidates (id, txn_id, other_id, created_at) VALUES (?,?,?,?)").bind(duplicateCandidateId, id, found.candidate.id, now).run();
   }
   const txn = (await env.DB.prepare("SELECT * FROM transactions WHERE id = ?").bind(id).first<Transaction>())!;
-  return { txn, merged: false, duplicateCandidateId };
+  await onChargeRecorded(env, deps, txn); // v2 S: link to a subscription, price-change check (never throws)
+  return { txn: (await env.DB.prepare("SELECT * FROM transactions WHERE id = ?").bind(id).first<Transaction>()) ?? txn, merged: false, duplicateCandidateId };
 }
 
 async function mergeIntoExisting(db: D1Database, existingId: string, input: CaptureInput, money: Money, cat: Categorisation): Promise<Transaction> {

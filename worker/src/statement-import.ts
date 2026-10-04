@@ -1,7 +1,8 @@
-import { addDays, findRule, normalizeMerchant, parseStatement, reconcile, sgtDate, sgtLocalToUtc, type ExistingTxn, type MerchantRule, type ParsedStatement, type ReconcilePlan, type StatementRow } from "@okanary/core";
+import { addDays, chargeMatches, findRule, normalizeMerchant, parseStatement, reconcile, sgtDate, sgtLocalToUtc, type ExistingTxn, type MerchantRule, type ParsedStatement, type ReconcilePlan, type StatementRow } from "@okanary/core";
 import type { Deps } from "./deps";
 import type { Env } from "./env";
 import { tripForDate } from "./trips";
+import { onChargeRecorded } from "./subscriptions";
 import { nowIso, ulid } from "./util";
 
 export const MAX_STATEMENT_ROWS = 300;
@@ -64,16 +65,28 @@ export async function importStatement(env: Env, deps: Deps, input: { account_id:
     if (!hist.has(h.merchant)) hist.set(h.merchant, h.category_id);
   }
   const trips = (await env.DB.prepare("SELECT id, start_date, end_date FROM trips").all<{ id: string; start_date: string | null; end_date: string | null }>()).results;
-  for (const r of plan.toAdd) stmts.push(insertImported(env, r, input.account_id, rules, hist, trips, now));
+  const added: { id: string; merchant: string; occurred_at: string; amount_minor: number; is_refund: number }[] = [];
+  for (const r of plan.toAdd) {
+    const id = ulid();
+    stmts.push(insertImported(env, id, r, input.account_id, rules, hist, trips, now));
+    added.push({ id, merchant: normalizeMerchant(r.description), occurred_at: sgtLocalToUtc(r.date, "12:00"), amount_minor: Math.abs(r.amount_minor), is_refund: r.amount_minor < 0 ? 1 : 0 });
+  }
 
   const rawId = ulid();
   stmts.push(env.DB.prepare("INSERT INTO raw_ingest (id, source, received_at, payload, parse_status) VALUES (?,?,?,?,'ok')").bind(rawId, "import", now, input.text.slice(0, 200_000)));
   for (let i = 0; i < stmts.length; i += 50) await env.DB.batch(stmts.slice(i, i + 50));
+  // v2 S: recurring charges mostly arrive through statements (no bank alert), so imported lines go through the subscription
+  // charge hook too. Live patterns are loaded once; only lines that match one cost extra queries.
+  const patterns = (await env.DB.prepare("SELECT merchant_pattern FROM subscriptions WHERE status IN ('active','cancel_intended','trial') AND merchant_pattern IS NOT NULL").all<{ merchant_pattern: string }>()).results.map((x) => x.merchant_pattern);
+  for (const a of added) {
+    if (a.is_refund || !patterns.some((p) => chargeMatches(a.merchant, p))) continue;
+    await onChargeRecorded(env, deps, { id: a.id, merchant: a.merchant, occurred_at: a.occurred_at, amount_minor: a.amount_minor, currency: "SGD", amount_sgd_minor: a.amount_minor, is_refund: 0, status: "confirmed" });
+  }
   outcome.applied = { corrected, confirmed, added: plan.toAdd.length };
   return outcome;
 }
 
-function insertImported(env: Env, r: StatementRow, accountId: string, rules: MerchantRule[], hist: Map<string, string>, trips: { id: string; start_date: string | null; end_date: string | null }[], now: string): D1PreparedStatement {
+function insertImported(env: Env, id: string, r: StatementRow, accountId: string, rules: MerchantRule[], hist: Map<string, string>, trips: { id: string; start_date: string | null; end_date: string | null }[], now: string): D1PreparedStatement {
   const merchant = normalizeMerchant(r.description);
   const rule = findRule(rules, merchant);
   const categoryId = rule?.category_id ?? hist.get(merchant) ?? null;
@@ -83,5 +96,5 @@ function insertImported(env: Env, r: StatementRow, accountId: string, rules: Mer
     `INSERT INTO transactions (id, occurred_at, account_id, amount_minor, currency, amount_sgd_minor, fx_rate, fx_source, merchant_raw, merchant,
        category_id, category_source, status, source, is_refund, is_reimbursable, is_excluded, note, trip_id, created_at, updated_at)
      VALUES (?,?,?,?, 'SGD', ?, NULL, 'statement', ?,?,?,?, 'confirmed', 'import', ?, 0, ?, 'Imported from statement', ?, ?, ?)`,
-  ).bind(ulid(), sgtLocalToUtc(r.date, "12:00"), accountId, amt, amt, r.description, merchant, categoryId, source, r.amount_minor < 0 ? 1 : 0, rule?.set_excluded ? 1 : 0, tripForDate(trips, r.date), now, now);
+  ).bind(id, sgtLocalToUtc(r.date, "12:00"), accountId, amt, amt, r.description, merchant, categoryId, source, r.amount_minor < 0 ? 1 : 0, rule?.set_excluded ? 1 : 0, tripForDate(trips, r.date), now, now);
 }

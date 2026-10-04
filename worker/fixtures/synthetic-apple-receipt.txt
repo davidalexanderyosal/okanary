@@ -1,0 +1,27 @@
+Return-Path: <no_reply@email.apple.com>
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=email.apple.com header.s=sel1; spf=pass smtp.mailfrom=email.apple.com; dmarc=pass
+From: Apple <no_reply@email.apple.com>
+To: owner@example.com
+Subject: Your receipt from Apple.
+Date: Mon, 05 Oct 2026 09:30:00 +0800
+Message-ID: <synthetic-apple-receipt-1@email.apple.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Apple
+Receipt
+
+Apple ID: o***@example.com
+Date: 5 Oct 2026
+Order ID: SYNTH0000001
+Document: 100000000001
+
+iCloud+ with 200 GB storage
+Monthly (Renews 5 Nov 2026)    S$3.98
+
+Subtotal    S$3.65
+GST (9%)    S$0.33
+Total    S$3.98
+
+If you have questions about this receipt, contact Apple Support.
+SYNTHETIC FIXTURE: invented for tests, not a real Apple email.

@@ -86,7 +86,7 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 | N — Net worth | DONE |
 | G — Goals | DONE |
 | W — Want list | DONE |
-| S — Subscriptions hub | todo |
+| S — Subscriptions hub | DONE |
 | P — Income & plan | todo |
 
 ## A — Weekly Lifestyle allowance: DONE
@@ -121,7 +121,16 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 - Web: Want list (Waiting / Ready / Decided, countdowns, quick add), "Want, not buy" in Quick add and on Home, "Not bought this year" on Home and Reports.
 - Tests: core `wants.test.ts`, worker `wants.test.ts`, web `wants.test.ts`.
 
+## S — Subscriptions hub: DONE
+- Migration 0008: `recurring` renamed in place to the one `subscriptions` table (+ `subscription_events`), data backfilled, FK follows (D-63). Detection needs 2 consecutive monthly charges (D-64).
+- Core `subscriptions.ts`: monthly/yearly equivalents, totals (Essentials vs Lifestyle), plan fixed costs + annual set-aside (D-65), price-change threshold incl. FX tolerance, missing charge, trial/renewal reminder timing, quarter, matching (pattern, candidate merge, Apple receipt), goal impact, catalogue.
+- Worker: `/api/subscriptions*` (manual add from catalogue with merge, confirm/dismiss, accept/review price, cancel intent, keep, remind later), charge hook on capture/manual/statement import (link, last charged, next renewal, price-change nudge), daily trial/renewal/missing/quarterly usage jobs (D-66), Apple receipt parser (UNVERIFIED) + daily re-match, AI receipt fallback to the Review inbox (D-67), `loadSubscriptionFixedCosts` for P.
+- Web: Subscriptions hub (totals, to-confirm, needs-a-look flags, cost in goal terms, add/edit from catalogue incl. trials, cancel intent opens the service page, "Still using?" check), links from Budgets and Reports.
+- Tests: core `subscriptions.test.ts` (+ updated detection in `phase5.test.ts`), worker `subscriptions.test.ts`, `receipts.test.ts`, `parsers.test.ts`, web `subscriptions.test.ts`.
+
 ## Needs David (v2)
+- **Apple receipt sample (before relying on S's Apple labelling):** forward one Apple subscription receipt to yourself, redact it, save it as `worker/fixtures/apple-receipt-1.txt` (and add Google Play / Netflix / Spotify receipts if you get them); the Apple parser is UNVERIFIED until checked against it.
+- Gmail: extend the forwarding filter to send Apple receipts (`no_reply@email.apple.com`) and service receipts (Netflix, Spotify, …) to `spend@<domain>`.
 - **Price API keys (before deploying N):** create free keys at Finnhub (finnhub.io), Alpha Vantage (alphavantage.co) and CoinGecko (Demo plan), then `npx wrangler secret put FINNHUB_API_KEY`, `ALPHAVANTAGE_API_KEY`, `COINGECKO_API_KEY`. Without a key that source is skipped (stocks fall back to Alpha Vantage; crypto has no fallback).
 - Apply migrations 0004+ remotely (`npm run db:migrate:remote`) and deploy; the new 06:30 SGT cron is in `wrangler.jsonc`.
 - Enter net-worth accounts, balances and holdings (Money → Net worth).

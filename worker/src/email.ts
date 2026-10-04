@@ -3,11 +3,12 @@ import type { Transaction } from "@okanary/core";
 import { runAlertsInBackground } from "./alerts";
 import { captureTransaction, pushPurchaseNudge } from "./capture";
 import type { Deps } from "./deps";
-import { bankForDomain, dkimPass } from "./email-auth";
+import { bankForDomain, dkimPass, receiptKindForSender, type ReceiptKind } from "./email-auth";
 import type { Env } from "./env";
 import { extractWithAi } from "./parsers/ai";
 import { htmlToText, type ParsedAlert } from "./parsers/common";
 import { parseAlert } from "./parsers";
+import { handleAppleReceipt, handleGenericReceipt, type ReceiptOutcome } from "./receipts";
 import { ulid } from "./util";
 
 /** The subset of Cloudflare's ForwardableEmailMessage we use (keeps tests simple). */
@@ -21,6 +22,7 @@ export type EmailOutcome =
   | { action: "forwarded"; reason: "not-an-alert" | "untrusted" | "too-large" | "error" }
   | { action: "duplicate" }
   | { action: "captured"; transactionId: string; merged: boolean; status: Transaction["status"]; via: "regex" | "ai" }
+  | ReceiptOutcome
   | { action: "failed"; error: string };
 
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -50,8 +52,10 @@ export async function handleEmail(message: InboundEmail, env: Env, deps: Deps, c
     const mail = await PostalMime.parse(buf);
     const fromDomain = (mail.from?.address ?? "").split("@")[1]?.toLowerCase() ?? "";
     const bank = bankForDomain(fromDomain, env.ALERT_SENDER_DOMAINS);
+    // Receipt senders (Apple, Google Play, common services) are a separate category from bank alerts; banks win on a clash.
+    const receiptKind: ReceiptKind | null = bank ? null : receiptKindForSender(mail.from?.address ?? "");
 
-    if (!bank) {
+    if (!bank && !receiptKind) {
       await forwardToOwner(env, message); // e.g. Gmail's forwarding-verification mail
       return { action: "forwarded", reason: "not-an-alert" };
     }
@@ -76,7 +80,9 @@ export async function handleEmail(message: InboundEmail, env: Env, deps: Deps, c
 
     const rawId = ulid();
     await env.DB.prepare("INSERT INTO raw_ingest (id, source, received_at, payload, parse_status) VALUES (?,?,?,?,?)")
-      .bind(rawId, `email:${bank}`, receivedAt, header + text, "received").run();
+      .bind(rawId, `email:${bank ?? receiptKind}`, receivedAt, header + text, "received").run();
+
+    if (!bank) return receiptKind === "apple" ? await handleAppleReceipt(env, deps, rawId, text) : await handleGenericReceipt(env, deps, rawId, header, text, sentAt);
 
     let parsed: ParsedAlert | null = parseAlert(bank, text, sentAt);
     let via: "regex" | "ai" = "regex";

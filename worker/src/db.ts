@@ -14,6 +14,12 @@ export const TXN_WITH_GROUP_SQL = `
  */
 export const REVIEW_WHERE = `t.status != 'void' AND t.is_excluded = 0 AND (t.status = 'needs_review' OR t.category_id IS NULL OR t.category_source = 'ai')`;
 
+/**
+ * raw_ingest rows that belong in the Review inbox's "failed" list: unparsed mail, plus service receipts the LLM read
+ * (parse_status 'review', source 'email:receipt') that wait for a decision on the Subscriptions screen (v2 S).
+ */
+export const RAW_REVIEW_WHERE = `((parse_status = 'failed' AND transaction_id IS NULL) OR (parse_status = 'review' AND source = 'email:receipt'))`;
+
 /** Rows covering [start of previous month, end of month): all that summarizeMonth needs. */
 export async function loadSummaryRows(db: D1Database, month: string): Promise<SummaryRow[]> {
   const start = monthRangeUtc(addMonths(month, -1)).start;
@@ -38,7 +44,7 @@ export async function monthSummary(db: D1Database, month: string, now: Date = ne
   const rows = await loadSummaryRows(db, month);
   const summary = summarizeMonth(rows, month, now);
   const rc = await db.prepare(`SELECT COUNT(*) AS n FROM transactions t WHERE ${REVIEW_WHERE}`).first<{ n: number }>();
-  const failed = await db.prepare(`SELECT COUNT(*) AS n FROM raw_ingest WHERE parse_status = 'failed' AND transaction_id IS NULL`).first<{ n: number }>();
+  const failed = await db.prepare(`SELECT COUNT(*) AS n FROM raw_ingest WHERE ${RAW_REVIEW_WHERE}`).first<{ n: number }>();
   const dups = await db.prepare(`SELECT COUNT(*) AS n FROM duplicate_candidates WHERE resolved = 0`).first<{ n: number }>();
   const budgets = resolveBudgets((await db.prepare("SELECT scope, ref_id, monthly_amount_sgd_minor, effective_from FROM budgets").all<BudgetRow>()).results, month);
   return { ...summary, reviewCount: (rc?.n ?? 0) + (failed?.n ?? 0) + (dups?.n ?? 0), budgets };

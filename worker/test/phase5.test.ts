@@ -2,13 +2,13 @@ import { env } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { CRON_DAILY, CRON_HOURLY, CRON_WEEKLY, runScheduled } from "../src/cron";
 import { sendWeeklyDigest } from "../src/digest";
-import { runRecurringDetection } from "../src/recurring";
+import { runSubscriptionDetection as runRecurringDetection } from "../src/subscriptions";
 import { _resetRateLimit } from "../src/routes/ingest";
 import { clientSubscription, count, genVapid, harness, json, resetDb } from "./helpers";
 
 let vapid: { pub: string; priv: string };
 beforeAll(async () => { vapid = await genVapid(); });
-beforeEach(async () => { _resetRateLimit(); await resetDb(); await env.DB.exec("DELETE FROM recurring"); });
+beforeEach(async () => { _resetRateLimit(); await resetDb(); });
 
 const add = (h: ReturnType<typeof harness>, o: Record<string, unknown>) => h.call("/api/transactions", json("POST", o));
 
@@ -43,10 +43,10 @@ describe("subscriptions (recurring detection)", () => {
     const h = harness();
     for (const d of ["2026-07-12", "2026-08-12", "2026-09-12"]) await add(h, { amount_minor: 5000, category_id: "subscriptions", merchant: "Work SaaS", occurred_at: `${d}T04:00:00Z`, is_reimbursable: true });
     await runScheduled(h.e, h.deps, CRON_DAILY);
-    expect(await count("SELECT COUNT(*) AS n FROM recurring")).toBe(0);
+    expect(await count("SELECT COUNT(*) AS n FROM subscriptions")).toBe(0);
     await seedNetflix(h);
     await runScheduled(h.e, h.deps, CRON_DAILY);
-    expect(await count("SELECT COUNT(*) AS n FROM recurring")).toBe(1);
+    expect(await count("SELECT COUNT(*) AS n FROM subscriptions")).toBe(1);
   });
 });
 

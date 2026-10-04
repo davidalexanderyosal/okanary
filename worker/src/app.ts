@@ -11,6 +11,7 @@ import { meta } from "./routes/meta";
 import { networth } from "./routes/networth";
 import { review } from "./routes/review";
 import { setup } from "./routes/setup";
+import { subscriptions } from "./routes/subscriptions";
 import { transactions } from "./routes/transactions";
 import { usual } from "./routes/usual";
 import { wants } from "./routes/wants";
@@ -35,6 +36,7 @@ export function createApp(overrides: Partial<Deps> = {}) {
   app.route("/api", goals);
   app.route("/api", setup);
   app.route("/api", wants);
+  app.route("/api", subscriptions);
   app.route("/api/transactions", transactions);
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));
   app.onError((err, c) => {

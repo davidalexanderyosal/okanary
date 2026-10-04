@@ -35,3 +35,29 @@ export function dkimPass(authResults: string[], fromDomain: string): boolean {
   }
   return false;
 }
+
+/**
+ * Receipt senders (v2 S): a separate category from bank alerts. Same trust rule (From domain allow-listed AND dkim=pass
+ * aligned with it, checked by the caller), but the mail is a receipt to label/learn from, not a card transaction.
+ *
+ * UNVERIFIED against real traffic (needs a real forwarded Apple receipt from David): Apple receipts normally come from
+ * no_reply@email.apple.com, so the whole apple.com family is accepted. google.com is also the sender of Gmail's own
+ * forwarding-verification mail, so for google.com only the Google Play / Google payments receipt mailboxes count.
+ */
+export type ReceiptKind = "apple" | "receipt";
+
+const APPLE_DOMAINS = ["apple.com", "email.apple.com", "itunes.com"];
+const SERVICE_DOMAINS = ["netflix.com", "spotify.com", "openai.com", "anthropic.com", "youtube.com"];
+const GOOGLE_RECEIPT_SENDERS = ["googleplay-noreply", "payments-noreply", "google-play-noreply"];
+
+const domainIn = (d: string, list: string[]) => list.some((dom) => d === dom || d.endsWith("." + dom));
+
+/** Which receipt category (if any) a From address belongs to. Bank domains are checked first by the caller. */
+export function receiptKindForSender(address: string): ReceiptKind | null {
+  const [local = "", domain = ""] = address.toLowerCase().split("@");
+  if (!domain) return null;
+  if (domainIn(domain, APPLE_DOMAINS)) return "apple";
+  if (domainIn(domain, SERVICE_DOMAINS)) return "receipt";
+  if (domain === "google.com" && GOOGLE_RECEIPT_SENDERS.includes(local)) return "receipt";
+  return null;
+}

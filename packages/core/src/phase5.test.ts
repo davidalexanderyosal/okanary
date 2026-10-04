@@ -15,7 +15,11 @@ describe("recurring detection", () => {
     const c = detectMonthly([t("NETFLIX", "2026-07-12", 1998), t("NETFLIX", "2026-08-12", 1998), t("NETFLIX", "2026-09-12", 2098)], NOW);
     expect(c).toEqual([{ merchant: "NETFLIX", expected_amount_sgd_minor: 1998, cadence: "monthly", occurrences: 3, last_date: "2026-09-12", next_expected: "2026-10-12", category_id: "subscriptions" }]);
   });
-  it("needs three charges; two isn't a pattern", () => expect(detectMonthly([t("X", "2026-08-12", 1000), t("X", "2026-09-12", 1000)], NOW)).toEqual([]));
+  it("needs two consecutive monthly charges; one isn't a pattern (v2 S)", () => {
+    expect(detectMonthly([t("X", "2026-09-12", 1000)], NOW)).toEqual([]);
+    expect(detectMonthly([t("X", "2026-08-12", 1000), t("X", "2026-09-12", 1000)], NOW)[0]).toMatchObject({ merchant: "X", occurrences: 2, next_expected: "2026-10-12" });
+    expect(detectMonthly([t("Y", "2026-07-12", 1000), t("Y", "2026-09-12", 1000)], NOW)).toEqual([]); // not consecutive months
+  });
   it("tolerates month-length drift (28-31 day gaps) and day-of-month wobble", () => {
     expect(detectMonthly([t("SPOTIFY", "2026-06-30", 998), t("SPOTIFY", "2026-07-31", 998), t("SPOTIFY", "2026-08-31", 998), t("SPOTIFY", "2026-09-30", 998)], NOW)[0]).toMatchObject({ occurrences: 4, next_expected: "2026-10-30" });
   });
@@ -23,16 +27,16 @@ describe("recurring detection", () => {
     expect(detectMonthly([t("CAFE", "2026-07-01", 500), t("CAFE", "2026-07-09", 500), t("CAFE", "2026-09-12", 500)], NOW)).toEqual([]);
     expect(detectMonthly([t("SHOP", "2026-07-12", 1000), t("SHOP", "2026-08-12", 9000), t("SHOP", "2026-09-12", 1000)], NOW)).toEqual([]);
   });
-  it("a price rise starts a new run: needs three at the new price", () => {
-    const rows = [t("GYM", "2026-05-12", 5000), t("GYM", "2026-06-12", 5000), t("GYM", "2026-07-12", 5000), t("GYM", "2026-08-12", 8000), t("GYM", "2026-09-12", 8000)];
-    expect(detectMonthly(rows, NOW)).toEqual([]);
-    expect(detectMonthly([...rows, t("GYM", "2026-10-12", 8000)], "2026-10-14T04:00:00Z")[0]).toMatchObject({ expected_amount_sgd_minor: 8000, occurrences: 3 });
+  it("a price rise starts a new run at the new price", () => {
+    const rows = [t("GYM", "2026-05-12", 5000), t("GYM", "2026-06-12", 5000), t("GYM", "2026-07-12", 5000), t("GYM", "2026-08-12", 8000)];
+    expect(detectMonthly(rows, NOW)).toEqual([]); // one charge at the new price
+    expect(detectMonthly([...rows, t("GYM", "2026-09-12", 8000)], NOW)[0]).toMatchObject({ expected_amount_sgd_minor: 8000, occurrences: 2 });
   });
   it("a service that went quiet 45+ days ago is not an active subscription", () => {
     expect(detectMonthly([t("OLD", "2026-03-12", 1000), t("OLD", "2026-04-12", 1000), t("OLD", "2026-05-12", 1000)], NOW)).toEqual([]);
   });
   it("ignores refunds/zero, same-day duplicates, and rows without a merchant", () => {
-    expect(detectMonthly([t("A", "2026-07-12", 1000), t("A", "2026-07-12", 1000), t("A", "2026-08-12", 1000), { ...t("B", "2026-08-12", 1000), merchant: null }], NOW)).toEqual([]);
+    expect(detectMonthly([t("A", "2026-09-12", 1000), t("A", "2026-09-12", 1000), { ...t("B", "2026-08-12", 1000), merchant: null }, { ...t("B", "2026-09-12", 1000), merchant: null }, t("C", "2026-08-12", 0), t("C", "2026-09-12", 0)], NOW)).toEqual([]);
   });
   it("addOneMonth clamps", () => {
     expect(addOneMonth("2026-01-31")).toBe("2026-02-28");
