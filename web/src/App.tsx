@@ -17,6 +17,7 @@ import { Subscriptions } from "./pages/Subscriptions";
 import { Transactions } from "./pages/Transactions";
 
 const NetWorth = lazy(() => import("./pages/NetWorth").then((m) => ({ default: m.NetWorth })));
+const GoalDetail = lazy(() => import("./pages/GoalDetail").then((m) => ({ default: m.GoalDetail })));
 const Reports = lazy(() => import("./pages/Reports").then((m) => ({ default: m.Reports })));
 
 // Settings lives behind the gear on Home; the centre slot is the add button.
@@ -57,6 +58,7 @@ function Shell() {
           <Route path="/money" element={<Navigate to="/money/networth" replace />} />
           <Route path="/money/networth" element={<Suspense fallback={null}><NetWorth /></Suspense>} />
           <Route path="/money/goals" element={<Goals />} />
+          <Route path="/money/goals/:id" element={<Suspense fallback={null}><GoalDetail /></Suspense>} />
           <Route path="/money/plan" element={<Plan />} />
           <Route path="/reports" element={<Suspense fallback={null}><Reports /></Suspense>} />
           <Route path="/settings" element={<Settings />} />

@@ -19,3 +19,4 @@ export * from "./nudge-gate";
 export * from "./baseline";
 export * from "./decimal";
 export * from "./networth";
+export * from "./goals";

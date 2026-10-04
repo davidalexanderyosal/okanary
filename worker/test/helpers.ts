@@ -62,6 +62,7 @@ export function harness(opts: {
 export const count = async (sql: string) => (await env.DB.prepare(sql).first<{ n: number }>())!.n;
 
 export async function resetDb() {
+  await env.DB.exec("DELETE FROM goal_contributions; DELETE FROM goal_snapshots; DELETE FROM goal_funding; DELETE FROM goals;");
   await env.DB.exec("DELETE FROM card_statement_paid; DELETE FROM holdings; DELETE FROM nw_balances; DELETE FROM nw_accounts; DELETE FROM price_quotes; DELETE FROM networth_snapshots;");
   await env.DB.exec(
     "DELETE FROM duplicate_candidates; DELETE FROM raw_ingest; DELETE FROM transactions; DELETE FROM merchant_rules; DELETE FROM accounts; DELETE FROM alert_log; DELETE FROM push_subscriptions; DELETE FROM fx_rates; DELETE FROM budgets; DELETE FROM trips; DELETE FROM push_outbox;",

@@ -3,6 +3,7 @@ import type { Deps } from "./deps";
 import type { Env } from "./env";
 import { sendWeeklyDigest } from "./digest";
 import { getSgdRate } from "./fx";
+import { runUnderspendPledges, underspendDue } from "./goals";
 import { hasSnapshot, runNetworthJob, symbolsMissingFreshQuote } from "./networth-job";
 import { sendMonthlySummary } from "./networth-summary";
 import { flushOutbox, sendNudge } from "./nudge-gate";
@@ -87,6 +88,8 @@ export async function runScheduled(env: Env, deps: Deps, cron: string): Promise<
     await flushOutbox(env, deps);
     // Net worth steps are isolated: a failure here must not stop the jobs above or each other.
     await networthHourly(env, deps).catch((e) => console.error("networth retry failed", (e as Error).message));
+    // Monday 00:xx SGT (first day of the configured week): pledge last week's underspend to the receiving goal (once per week).
+    if (await underspendDue(env, deps).catch(() => false)) await runUnderspendPledges(env, deps).catch((e) => console.error("underspend pledges failed", (e as Error).message));
     const sgt = sgtParts(deps.now());
     if (sgt.day === 1 && sgt.hour === 9) await sendMonthlySummary(env, deps).catch((e) => console.error("monthly summary failed", (e as Error).message)); // 1st, 09:00 SGT
   }

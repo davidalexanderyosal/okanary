@@ -7,6 +7,7 @@ import { TXN_WITH_GROUP_SQL } from "./db";
 import type { Deps } from "./deps";
 import type { Env } from "./env";
 import { getSgdRate } from "./fx";
+import { snapshotGoals } from "./goals";
 import { fetchPrices, priceKey, type WantedSymbol } from "./prices";
 import { setSetting } from "./settings";
 
@@ -126,9 +127,9 @@ export async function previousSnapshot(db: D1Database, before: string): Promise<
   return r ? snapshotFromRow(r) : null;
 }
 
-/** Hook for feature G: it writes goal_snapshots (and refreshes goal horizons) from the day's snapshot. Intentionally empty for now. */
-export async function afterSnapshot(_env: Env, _deps: Deps, _snapshot: SnapshotValues): Promise<void> {
-  /* feature G */
+/** Hook for feature G: writes goal_snapshots and refreshes goal horizons (and the one-time safer-funding prompt) from the day's snapshot. */
+export async function afterSnapshot(env: Env, deps: Deps, snapshot: SnapshotValues): Promise<void> {
+  await snapshotGoals(env, deps, snapshot);
 }
 
 export interface NetworthJobOptions {

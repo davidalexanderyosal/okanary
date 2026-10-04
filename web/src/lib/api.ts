@@ -1,4 +1,4 @@
-import type { Account, Breakdown, BudgetRow, CardLiability, NwKind, Category, CategoryGroup, MonthSummary, Transaction, UsualResult, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
+import type { Account, Breakdown, BudgetRow, CardLiability, FundingType, GoalKind, GoalState, GoalStatus, Horizon, NwKind, Category, CategoryGroup, MonthSummary, Transaction, UsualResult, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
 
 export type TxnRowData = Transaction & { group_id: string | null; group_counts_as_spend: number | null };
 export type Summary = MonthSummary & { reviewCount: number; budgets: BudgetRow[] };
@@ -98,6 +98,53 @@ export interface NwAccountInput { name: string; kind: NwKind; institution?: stri
 export interface NwBalanceInput { amount_minor: number; currency?: string; as_of?: string; note?: string | null; flow_minor?: number | null }
 export interface NwHoldingInput { account_id: string; asset_type: "us_equity" | "crypto"; symbol: string; quantity: string; cost_basis_minor?: number | null; cost_currency?: string | null; acquired_at?: string | null }
 
+// ---- Goals (v2 G) ----
+export type { GoalKind, GoalState, GoalStatus, Horizon, FundingType };
+export interface GoalFundingRow { id: string; goal_id: string; source_type: FundingType; source_id: string; share_bp: number | null; earmark_minor: number | null }
+export interface GoalContribution {
+  id: string; goal_id: string; period: string; amount_sgd_minor: number; source: "underspend" | "want_skipped" | "commission" | "manual";
+  status: "pledged" | "transferred" | "skipped"; created_at: string; resolved_at: string | null;
+}
+export type GoalWarning =
+  | { type: "earmark_over"; account_id: string; claimed: number; balance: number; goal_ids: string[] }
+  | { type: "share_over"; source_type: "nw_account" | "holding"; source_id: string; total_bp: number; goal_ids: string[] };
+export interface GoalView {
+  id: string; name: string; emoji: string | null; kind: GoalKind; priority: number;
+  target_date: string | null; start_date: string | null; created_at: string;
+  target_today_minor: number; inflation_bp: number | null;
+  horizon: Horizon; return_bp: number; return_bp_is_default: boolean;
+  /** target at the target date (inflated for mid/long) */
+  target: number;
+  /** progress: linked values + earmarks (+ transferred contributions for goals without share links) */
+  value: number;
+  value_parts: { linked: number; earmarked: number; contributions: number; counts_contributions: boolean };
+  /** net monthly saving over the last 3 months (market excluded); null until there is an earlier snapshot */
+  pace: number | null;
+  status: GoalStatus;
+  range: { conservative: number; base: number; optimistic: number } | null;
+  totals: { transferred: number; pledged: number; skipped: number };
+  pledges: GoalContribution[];
+  funding: GoalFundingRow[];
+  warnings: GoalWarning[];
+  planned_monthly_minor: number | null;
+  receives_underspend: boolean;
+  safer_funding_suggested: boolean;
+}
+export interface GoalsResponse { today: string; goals: GoalView[]; summary: string | null; receiving_goal_id: string | null; warnings: GoalWarning[] }
+export interface GoalDetail extends GoalView {
+  history: { date: string; value_sgd_minor: number }[];
+  contributions: GoalContribution[];
+  /** projected value per month from today (index 0 = today) at the current pace */
+  path: number[];
+  cone: { conservative: number[]; optimistic: number[] } | null;
+}
+export interface EmergencySuggestion { average: number | null; months: string[]; target: number | null }
+export interface GoalInput {
+  name: string; emoji: string | null; kind: GoalKind; target_today_minor: number; target_date: string | null;
+  inflation_bp: number | null; return_bp: number | null; receives_underspend: boolean;
+}
+export interface GoalFundingInput { source_type: FundingType; source_id: string; share_bp?: number; earmark_minor?: number }
+
 /** Thrown by refreshNetworth when the 5-minute limit applies (HTTP 429). */
 export class RefreshLimitedError extends Error {
   constructor(public retryAfterS: number) { super("refreshed a moment ago"); }
@@ -175,4 +222,17 @@ export const api = {
   deleteNwHolding: (id: string) => req<{ ok: true }>(`/api/nw/holdings/${id}`, { method: "DELETE" }),
   markStatementPaid: (accountId: string, statementDate: string) => req<{ account_id: string; statement_date: string; paid_at: string }>(`/api/cards/${accountId}/statement-paid`, body("POST", { statement_date: statementDate })),
   unmarkStatementPaid: (accountId: string, statementDate: string) => req<{ ok: true }>(`/api/cards/${accountId}/statement-paid`, body("DELETE", { statement_date: statementDate })),
+  goals: () => req<GoalsResponse>("/api/goals"),
+  goal: (id: string) => req<GoalDetail>(`/api/goals/${id}`),
+  emergencySuggestion: () => req<EmergencySuggestion>("/api/goals/emergency-suggestion"),
+  createGoal: (g: Partial<GoalInput> & Pick<GoalInput, "name" | "kind">) => req<GoalView>("/api/goals", body("POST", g)),
+  patchGoal: (id: string, g: Partial<GoalInput> & { archived?: boolean }) => req<GoalView | { id: string; archived: true }>(`/api/goals/${id}`, body("PATCH", g)),
+  archiveGoal: (id: string) => req<{ id: string; archived: true }>(`/api/goals/${id}`, { method: "DELETE" }),
+  reorderGoals: (ids: string[]) => req<{ order: string[] }>("/api/goals/reorder", body("POST", { ids })),
+  setGoalUnderspend: (id: string, on: boolean) => req<{ id: string; receives_underspend: boolean }>(`/api/goals/${id}/underspend`, body("POST", { on })),
+  addGoalFunding: (id: string, f: GoalFundingInput) => req<{ link: GoalFundingRow; warnings: GoalWarning[] }>(`/api/goals/${id}/funding`, body("POST", f)),
+  deleteGoalFunding: (linkId: string) => req<{ ok: true; warnings: GoalWarning[] }>(`/api/goal-funding/${linkId}`, { method: "DELETE" }),
+  addGoalContribution: (id: string, c: { amount_sgd_minor: number; status?: "transferred" | "pledged" }) => req<GoalContribution>(`/api/goals/${id}/contributions`, body("POST", c)),
+  transferPledge: (id: string) => req<GoalContribution>(`/api/goal-contributions/${id}/transfer`, { method: "POST" }),
+  skipPledge: (id: string) => req<GoalContribution>(`/api/goal-contributions/${id}/skip`, { method: "POST" }),
 };

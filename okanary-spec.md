@@ -375,6 +375,11 @@ Built in the order A → U → N → G → W → S → P; mapping and conflicts 
 - Prices: Finnhub → Alpha Vantage fallback, CoinGecko (SGD, attribution shown), FX via Frankfurter/fx_rates. Daily job 06:30 SGT writes price_quotes and one networth_snapshots row (idempotent); retries hourly to 12:00 SGT, then keeps the last price marked stale. "Refresh now" ≤ 1 per 5 minutes.
 - Display: total, 1-month and YTD change split "You saved" vs "Market"; daily change one tap away on the Net worth screen only, never pushed. Home: "Net worth S$xx,xxx · +S$X this month". Monthly summary push on the 1st at 09:00 SGT. Balances older than 30 days get an "update?" chip.
 
+### 13.G Goals (built)
+- Goals of any horizon (short < 2 y, mid 2–10 y, long ≥ 10 y, derived from the date and refreshed daily); kinds emergency / short / mid / long / retirement; explicit priority (emergency first). Mid/long targets in today's dollars, inflated per goal (default 3%); retirement helper = monthly × 12 × 25; emergency fund suggestion = 6 × average monthly Essentials.
+- Value from linked net-worth accounts/holdings (at a share) and earmarks, plus transferred contributions for goals without share links; pledges never count until transferred. Required monthly, current pace (market excluded), projected value/completion, On track / Ahead / Behind, ±2 pp range for long goals. "Move to safer funding?" once when a stock/crypto-funded goal drops below 2 years.
+- Pledges: weekly underspend (Monday 00:00 SGT, to the receiving goal), skipped wants (W) and commission splits (P); Transferred / Skip in the app or from the push. Home: "Goals: 4 on track · 1 behind (MBA −S$120/mo)".
+
 ## Sources
 
 - [Apple Pay expense tracking with Shortcuts Wallet automation — CashJot](https://www.cashjot.com/blog/apple-pay-expense-tracking)

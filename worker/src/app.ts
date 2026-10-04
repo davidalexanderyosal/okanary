@@ -4,6 +4,7 @@ import type { AppEnv } from "./env";
 import { accuracy } from "./routes/accuracy";
 import { allowance } from "./routes/allowance";
 import { budgets } from "./routes/budgets";
+import { goals } from "./routes/goals";
 import { ingest } from "./routes/ingest";
 import { insights } from "./routes/insights";
 import { meta } from "./routes/meta";
@@ -30,6 +31,7 @@ export function createApp(overrides: Partial<Deps> = {}) {
   app.route("/api", allowance);
   app.route("/api", usual);
   app.route("/api", networth);
+  app.route("/api", goals);
   app.route("/api", setup);
   app.route("/api/transactions", transactions);
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));

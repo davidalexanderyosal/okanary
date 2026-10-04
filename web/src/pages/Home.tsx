@@ -23,6 +23,7 @@ export function Home() {
   const allowance = useResource("allowance", api.allowance);
   const usual = useResource("usual", api.usual);
   const networth = useResource("networth", api.networth);
+  const goals = useResource("goals", api.goals);
   const recent = useResource("recent", () => api.transactions({ limit: 5 }));
   const [editing, setEditing] = useState<TxnRowData | null>(null);
   const s = summary.data;
@@ -48,6 +49,7 @@ export function Home() {
   const weekUsualEl = weekUsual && <p className={`num mt-1 text-xs ${usualToneClass[weekUsual.tone]}`}>{weekUsual.text}</p>;
   const nw = networth.data;
   const nwLine = nw?.latest && (nw.accounts.length > 0 || nw.latest.net !== 0) ? homeNetWorthLine(nw.latest.net, nw.change.month?.change) : null;
+  const goalsLine = goals.data && goals.data.goals.length > 0 ? goals.data.summary : null;
   const lifestyleShare = s && s.total > 0 ? Math.round((g.lifestyle * 100) / s.total) : 0;
 
   return (
@@ -134,6 +136,11 @@ export function Home() {
       {nwLine && (
         <Link to="/money/networth" className="tap num mt-3 flex items-center justify-between rounded-full bg-card px-4 text-[13px] shadow-sm active:bg-line/40" aria-label="Net worth">
           <span>{nwLine}</span><span aria-hidden className="text-accent">›</span>
+        </Link>
+      )}
+      {goalsLine && (
+        <Link to="/money/goals" className="tap num mt-2 flex items-center justify-between rounded-full bg-card px-4 text-[13px] shadow-sm active:bg-line/40" aria-label="Goals">
+          <span>{goalsLine}</span><span aria-hidden className="text-accent">›</span>
         </Link>
       )}
 

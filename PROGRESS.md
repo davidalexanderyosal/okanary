@@ -84,7 +84,7 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 | A — Weekly Lifestyle allowance | DONE |
 | U — "Vs your usual" | DONE |
 | N — Net worth | DONE |
-| G — Goals | todo |
+| G — Goals | DONE |
 | W — Want list | todo |
 | S — Subscriptions hub | todo |
 | P — Income & plan | todo |
@@ -107,6 +107,13 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 - Worker: `prices.ts` (Finnhub → Alpha Vantage fallback, CoinGecko demo key), `networth-job.ts` (06:30 SGT cron + hourly retries to 12:00 then stale carry-forward, idempotent per day), `/api/networth`, `/history`, `/refresh` (≤1 per 5 min), CRUD for accounts/balances/holdings, card statement paid; monthly summary push (1st, 09:00 SGT) with saved vs market.
 - Web: Money hub (Net worth / Goals / Plan / Budgets, D-57), Net worth tab (total, 1-month/YTD saved vs market, daily one tap away, stacked area chart, accounts with "update?" chip, cards, holdings, sheets, Refresh now, "Crypto prices by CoinGecko"); Home line "Net worth S$xx,xxx · +S$X this month".
 - Tests: core `networth.test.ts` (decimal × price, FX, flows vs market worked example, card liability, stale), worker `networth.test.ts` (mocked Finnhub/Alpha Vantage/CoinGecko/Frankfurter: idempotency, fallback, stale, cards, cron dispatch, summary, API), web `networth.test.ts`.
+
+## G — Goals: DONE
+- Migration 0006 (goals incl. planned_monthly_minor, goal_funding, goal_snapshots, goal_contributions; one underspend receiver, one underspend pledge per week). No earlier goals table existed, so nothing to migrate (tested).
+- Core `goals.ts`: targets (inflation, 4% rule, emergency = 6 × Essentials), PMT required, projection, completion date, status (D-58), range ±2 pp, funding value (D-59) and warnings, pace excluding market (D-60), horizon + "safer funding" prompt, underspend amount/receiver (D-61), waterfall, Home summary line.
+- Worker: `/api/goals*` (CRUD, reorder, underspend receiver, funding links, contributions transfer/skip, emergency suggestion), daily goal snapshots + horizon refresh + one-time safer-funding nudge from the net worth job, Monday 00:00 SGT underspend pledges (idempotent) with Transferred/Skip push actions, goals line in the monthly summary.
+- Web: Goals tab (Short/Mid/Long cards, pledges, warnings, reorder, emergency suggestion), editor, detail with projection chart (+cone for long goals), assumptions + "Estimates, not financial advice.", Home line, service-worker actions.
+- Tests: core `goals.test.ts`, worker `goals.test.ts`, web `goals.test.ts`.
 
 ## Needs David (v2)
 - **Price API keys (before deploying N):** create free keys at Finnhub (finnhub.io), Alpha Vantage (alphavantage.co) and CoinGecko (Demo plan), then `npx wrangler secret put FINNHUB_API_KEY`, `ALPHAVANTAGE_API_KEY`, `COINGECKO_API_KEY`. Without a key that source is skipped (stocks fall back to Alpha Vantage; crypto has no fallback).

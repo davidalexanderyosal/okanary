@@ -1,6 +1,7 @@
 import { BALANCE_STALE_DAYS, addMonths, balanceAgeDays, changeOverRange, daysInMonth, formatMoneyShort, latestBalance, sgtDate, sgtMonth, type NwAccount, type NwBalance, type NwSnapshotRow } from "@okanary/core";
 import type { Deps } from "./deps";
 import type { Env } from "./env";
+import { loadGoals } from "./goals";
 import { sendNudge } from "./nudge-gate";
 import { nowIso, ulid } from "./util";
 
@@ -9,9 +10,10 @@ const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "Ju
 /** Explicit sign: "+S$1,240" / "-S$300". */
 const signed = (minor: number) => (minor > 0 ? "+" : "") + formatMoneyShort(minor);
 
-/** Extra lines for the monthly summary: feature G adds goal status, feature P the plan check-in. Empty for now. */
-export async function monthlySummaryExtras(_env: Env, _deps: Deps): Promise<string[]> {
-  return [];
+/** Extra lines for the monthly summary: feature G adds the goals line, feature P will add the plan check-in. */
+export async function monthlySummaryExtras(env: Env, deps: Deps): Promise<string[]> {
+  const line = (await loadGoals(env.DB, deps.now())).summary;
+  return line ? [line] : [];
 }
 
 /** Accounts whose latest balance is older than BALANCE_STALE_DAYS (the one reminder; the net worth screen shows a chip). */
