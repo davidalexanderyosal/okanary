@@ -15,6 +15,7 @@ import { homeNetWorthLine } from "../lib/networth";
 import { monthLine, safeNote, weekHeadline } from "../lib/allowance";
 import { monthUsualLine, usualToneClass, weekUsualText } from "../lib/usual";
 import { TxnRow } from "../components/TxnRow";
+import { notBoughtText, wantsAddLink } from "../lib/wants";
 
 export function Home() {
   const month = currentMonth();
@@ -24,6 +25,7 @@ export function Home() {
   const usual = useResource("usual", api.usual);
   const networth = useResource("networth", api.networth);
   const goals = useResource("goals", api.goals);
+  const wantStats = useResource("wantStats", api.wantStats);
   const recent = useResource("recent", () => api.transactions({ limit: 5 }));
   const [editing, setEditing] = useState<TxnRowData | null>(null);
   const s = summary.data;
@@ -50,6 +52,7 @@ export function Home() {
   const nw = networth.data;
   const nwLine = nw?.latest && (nw.accounts.length > 0 || nw.latest.net !== 0) ? homeNetWorthLine(nw.latest.net, nw.change.month?.change) : null;
   const goalsLine = goals.data && goals.data.goals.length > 0 ? goals.data.summary : null;
+  const notBought = notBoughtText(wantStats.data);
   const lifestyleShare = s && s.total > 0 ? Math.round((g.lifestyle * 100) / s.total) : 0;
 
   return (
@@ -144,7 +147,12 @@ export function Home() {
         </Link>
       )}
 
-      <section className="mb-6 mt-4" aria-label="Recent">
+      <div className="mt-2 flex items-center justify-between gap-3 px-1">
+        {notBought ? <Link to="/wants?tab=decided" className="num min-w-0 truncate text-xs text-muted">{notBought}</Link> : <span />}
+        <Link to={wantsAddLink({})} className="tap shrink-0 text-xs font-bold text-accent">Want, not buy</Link>
+      </div>
+
+      <section className="mb-6 mt-2" aria-label="Recent">
         <h2 className="px-1 pb-1.5 text-[13px] font-bold text-muted">Latest</h2>
         <div className="receipt overflow-visible rounded-[18px] bg-card shadow-sm">
           {(recent.data ?? []).length === 0 && <p className="p-5 text-center text-sm text-muted">No transactions yet. Tap + to add your first.</p>}

@@ -380,6 +380,10 @@ Built in the order A → U → N → G → W → S → P; mapping and conflicts 
 - Value from linked net-worth accounts/holdings (at a share) and earmarks, plus transferred contributions for goals without share links; pledges never count until transferred. Required monthly, current pace (market excluded), projected value/completion, On track / Ahead / Behind, ±2 pp range for long goals. "Move to safer funding?" once when a stock/crypto-funded goal drops below 2 years.
 - Pledges: weekly underspend (Monday 00:00 SGT, to the receiving goal), skipped wants (W) and commission splits (P); Transferred / Skip in the app or from the push. Home: "Goals: 4 on track · 1 behind (MBA −S$120/mo)".
 
+### 13.W Want list (built)
+- "Want, not buy" (Quick add and Home) adds an item with a wait of 3 / 7 (default) / 30 days or custom; 30 by default above S$200. When the wait ends the item becomes Ready and one batched push asks "Still want AirPods case (S$59)? Buy / Skip" (counts toward the nudge limit).
+- Skip → optional pledge of the price to the receiving goal; Buy → optional link to a matching transaction (±10%, 14 days); an early buy is recorded without comment. "Not bought this year: S$412 (9 items)" on Home and Reports.
+
 ## Sources
 
 - [Apple Pay expense tracking with Shortcuts Wallet automation — CashJot](https://www.cashjot.com/blog/apple-pay-expense-tracking)

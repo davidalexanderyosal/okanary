@@ -85,7 +85,7 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 | U — "Vs your usual" | DONE |
 | N — Net worth | DONE |
 | G — Goals | DONE |
-| W — Want list | todo |
+| W — Want list | DONE |
 | S — Subscriptions hub | todo |
 | P — Income & plan | todo |
 
@@ -114,6 +114,12 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 - Worker: `/api/goals*` (CRUD, reorder, underspend receiver, funding links, contributions transfer/skip, emergency suggestion), daily goal snapshots + horizon refresh + one-time safer-funding nudge from the net worth job, Monday 00:00 SGT underspend pledges (idempotent) with Transferred/Skip push actions, goals line in the monthly summary.
 - Web: Goals tab (Short/Mid/Long cards, pledges, warnings, reorder, emergency suggestion), editor, detail with projection chart (+cone for long goals), assumptions + "Estimates, not financial advice.", Home line, service-worker actions.
 - Tests: core `goals.test.ts`, worker `goals.test.ts`, web `goals.test.ts`.
+
+## W — Want list: DONE
+- Migration 0007 (`wants` + `bought_early`). Core `wants.ts` (default wait, decide_after in SGT, transitions incl. early-buy confirmation, batched ready push text, skipped total, transaction match ±10%/14 days, countdown) (D-62).
+- Worker: `/api/wants*` (add with FX, buy/skip/pledge/link/matches), hourly ready job with one batched push via the nudge gate, wait threshold setting.
+- Web: Want list (Waiting / Ready / Decided, countdowns, quick add), "Want, not buy" in Quick add and on Home, "Not bought this year" on Home and Reports.
+- Tests: core `wants.test.ts`, worker `wants.test.ts`, web `wants.test.ts`.
 
 ## Needs David (v2)
 - **Price API keys (before deploying N):** create free keys at Finnhub (finnhub.io), Alpha Vantage (alphavantage.co) and CoinGecko (Demo plan), then `npx wrangler secret put FINNHUB_API_KEY`, `ALPHAVANTAGE_API_KEY`, `COINGECKO_API_KEY`. Without a key that source is skipped (stocks fall back to Alpha Vantage; crypto has no fallback).

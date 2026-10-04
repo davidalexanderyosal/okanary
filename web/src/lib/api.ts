@@ -53,6 +53,7 @@ export interface SetupInfo {
   push: { configured: boolean; public_key: string | null; subscriptions: number; post_purchase: boolean; weekly_digest: boolean };
   allowance_settings: { week_start: number; override_minor: number | null; carry: boolean };
   notifications: { daily_limit: number; quiet_start: string; quiet_end: string };
+  wants: { long_wait_threshold_minor: number };
 }
 /** GET /api/allowance: this week's Lifestyle allowance (v2 A). All amounts SGD minor units. */
 export interface Allowance {
@@ -69,7 +70,29 @@ export interface SettingsInput {
   push_post_purchase?: boolean; push_weekly_digest?: boolean; alert_thresholds?: number[];
   week_start?: number; allowance_override_minor?: number | null; allowance_carry?: boolean;
   nudge_daily_limit?: number; quiet_start?: string; quiet_end?: string;
+  want_long_wait_threshold_minor?: number;
 }
+
+// ---- Want list (v2 W) ----
+export type WantStatus = "waiting" | "ready" | "bought" | "skipped";
+export interface WantItem {
+  id: string; name: string; price_minor: number; currency: string; price_sgd_minor: number;
+  url: string | null; note: string | null; category_id: string | null;
+  wait_days: number; added_at: string; decide_after: string;
+  status: WantStatus; decided_at: string | null; transaction_id: string | null; bought_early: number;
+  left: { days: number; hours: number; due: boolean };
+}
+export interface WantStats { year: number; skipped_total_minor: number; skipped_count: number }
+export interface WantsResponse {
+  waiting: WantItem[]; ready: WantItem[]; decided: WantItem[]; stats: WantStats;
+  receiving_goal: { id: string; name: string; emoji: string | null } | null;
+}
+export interface WantInput {
+  name: string; price_minor: number; currency?: string; price_sgd_minor?: number;
+  url?: string | null; note?: string | null; category_id?: string | null; wait_days?: number;
+}
+export type WantMatch = TxnRowData;
+export interface WantSkipOffer { goal_id: string; name: string; emoji: string | null; amount: number }
 
 // ---- Net worth (v2 N) ----
 export type { NwKind };
@@ -235,4 +258,16 @@ export const api = {
   addGoalContribution: (id: string, c: { amount_sgd_minor: number; status?: "transferred" | "pledged" }) => req<GoalContribution>(`/api/goals/${id}/contributions`, body("POST", c)),
   transferPledge: (id: string) => req<GoalContribution>(`/api/goal-contributions/${id}/transfer`, { method: "POST" }),
   skipPledge: (id: string) => req<GoalContribution>(`/api/goal-contributions/${id}/skip`, { method: "POST" }),
+  // Want list (v2 W)
+  wants: () => req<WantsResponse>("/api/wants"),
+  wantStats: () => req<WantStats>("/api/wants/stats"),
+  createWant: (w: WantInput) => req<WantItem>("/api/wants", body("POST", w)),
+  patchWant: (id: string, w: Partial<WantInput>) => req<WantItem>(`/api/wants/${id}`, body("PATCH", w)),
+  deleteWant: (id: string) => req<{ ok: true }>(`/api/wants/${id}`, { method: "DELETE" }),
+  /** 409 "confirm_early" while the wait is running: ask once, then resend with confirm_early. */
+  buyWant: (id: string, confirmEarly = false) => req<{ want: WantItem; matches: WantMatch[] }>(`/api/wants/${id}/buy`, body("POST", confirmEarly ? { confirm_early: true } : {})),
+  skipWant: (id: string) => req<{ want: WantItem; offer: WantSkipOffer | null }>(`/api/wants/${id}/skip`, { method: "POST" }),
+  pledgeWant: (id: string, goalId: string) => req<{ ok: true; pledge_id: string }>(`/api/wants/${id}/pledge`, body("POST", { goal_id: goalId })),
+  wantMatches: (id: string) => req<{ matches: WantMatch[] }>(`/api/wants/${id}/matches`),
+  linkWant: (id: string, transactionId: string) => req<WantItem>(`/api/wants/${id}/link`, body("POST", { transaction_id: transactionId })),
 };

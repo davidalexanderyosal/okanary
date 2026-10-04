@@ -10,6 +10,7 @@ import { flushOutbox, sendNudge } from "./nudge-gate";
 import { runRecurringDetection } from "./recurring";
 import { tripCovering } from "./trips";
 import { nowIso, ulid } from "./util";
+import { runWantsReady } from "./wants";
 
 const STALE_PENDING_MS = 24 * 3600_000;
 const EMAIL_SILENCE_DAYS = 3;
@@ -88,6 +89,8 @@ export async function runScheduled(env: Env, deps: Deps, cron: string): Promise<
     await flushOutbox(env, deps);
     // Net worth steps are isolated: a failure here must not stop the jobs above or each other.
     await networthHourly(env, deps).catch((e) => console.error("networth retry failed", (e as Error).message));
+    // Want list: waiting items whose wait is over become ready; ONE batched push through the nudge gate.
+    await runWantsReady(env, deps).catch((e) => console.error("wants ready failed", (e as Error).message));
     // Monday 00:xx SGT (first day of the configured week): pledge last week's underspend to the receiving goal (once per week).
     if (await underspendDue(env, deps).catch(() => false)) await runUnderspendPledges(env, deps).catch((e) => console.error("underspend pledges failed", (e as Error).message));
     const sgt = sgtParts(deps.now());

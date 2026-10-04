@@ -15,6 +15,7 @@ import { Settings } from "./pages/Settings";
 import { Setup } from "./pages/Setup";
 import { Subscriptions } from "./pages/Subscriptions";
 import { Transactions } from "./pages/Transactions";
+import { Wants } from "./pages/Wants";
 
 const NetWorth = lazy(() => import("./pages/NetWorth").then((m) => ({ default: m.NetWorth })));
 const GoalDetail = lazy(() => import("./pages/GoalDetail").then((m) => ({ default: m.GoalDetail })));
@@ -67,6 +68,7 @@ function Shell() {
           <Route path="/raw" element={<Raw />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/import" element={<Import />} />
+          <Route path="/wants" element={<Wants />} />
         </Routes>
       </main>
 

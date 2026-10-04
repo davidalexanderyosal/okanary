@@ -7,6 +7,7 @@ import { pushConfigured, sendPushToAll } from "../push";
 import { effectiveIngestToken } from "./ingest";
 import { deleteSetting, getSetting, setSetting } from "../settings";
 import { nowIso, ulid } from "../util";
+import { loadLongWaitThreshold } from "../wants";
 
 export const setup = new Hono<AppEnv>();
 
@@ -32,6 +33,7 @@ setup.get("/setup", async (c) => {
     notifications: { daily_limit: parseNudgeLimit(nl), quiet_start: hm(quiet.start), quiet_end: hm(quiet.end) },
     email: { forward_configured: !!c.env.FORWARD_TO, banks: emailStatus },
     alerts: { thresholds: parseThresholds(await getSetting(c.env.DB, "alert_thresholds")) },
+    wants: { long_wait_threshold_minor: await loadLongWaitThreshold(c.env.DB) },
     ingest_path: "/api/ingest/applepay",
     token,
     last_applepay_at: last?.received_at ?? null,
@@ -59,6 +61,8 @@ const settingsSchema = z.object({
   nudge_daily_limit: z.number().int().min(0).max(20).optional(),
   quiet_start: hmSchema.optional(),
   quiet_end: hmSchema.optional(),
+  // v2 W: above this price (SGD minor) a want's default wait is 30 days
+  want_long_wait_threshold_minor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
 });
 
 setup.put("/settings", async (c) => {
@@ -76,6 +80,7 @@ setup.put("/settings", async (c) => {
   if (p.data.nudge_daily_limit !== undefined) await setSetting(c.env.DB, "nudge_daily_limit", String(p.data.nudge_daily_limit));
   if (p.data.quiet_start !== undefined) await setSetting(c.env.DB, "quiet_start", p.data.quiet_start);
   if (p.data.quiet_end !== undefined) await setSetting(c.env.DB, "quiet_end", p.data.quiet_end);
+  if (p.data.want_long_wait_threshold_minor !== undefined) await setSetting(c.env.DB, "want_long_wait_threshold_minor", String(p.data.want_long_wait_threshold_minor));
   return c.json({ ok: true });
 });
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { addMonths, expectedByDay } from "@okanary/core";
 import { api, type Summary } from "../lib/api";
@@ -7,6 +8,7 @@ import { monthLabel, prettyMerchant, sgd, shortDate } from "../lib/format";
 import { currentMonth } from "../lib/month";
 import { useRefData } from "../lib/refdata";
 import { groupColor } from "../components/groups";
+import { notBoughtText } from "../lib/wants";
 import { NO_HISTORY_TEXT, usualDiffText, usualToneClass } from "../lib/usual";
 import { MonthStepper } from "./Transactions";
 
@@ -64,6 +66,18 @@ function Overview({ s }: { s: Summary }) {
         </div>
       </section>
     </>
+  );
+}
+
+/** "Not bought this year" (v2 W): what the want list's skips add up to (SGT calendar year). */
+function NotBought() {
+  const text = notBoughtText(useResource("wantStats", api.wantStats).data);
+  if (!text) return null;
+  return (
+    <Card title="Want list">
+      <p className="num text-sm font-medium">{text}</p>
+      <Link to="/wants?tab=decided" className="tap inline-flex items-center text-xs font-bold text-accent">See what you decided ›</Link>
+    </Card>
   );
 }
 
@@ -268,6 +282,7 @@ export function Reports() {
       </div>
       {tab === "overview" && s && <Overview s={s} />}
       {tab === "overview" && s && month === currentMonth() && <VsUsual />}
+      {tab === "overview" && <NotBought />}
       {tab === "daily" && s && <Daily s={s} month={month} />}
       {tab === "merchants" && s && <Merchants s={s} />}
       {tab === "trend" && s && <Trend month={month} s={s} />}
