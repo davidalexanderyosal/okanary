@@ -56,6 +56,7 @@ describe("threshold alerts: 50 / 80 / 100%, once per period", () => {
   it("crossing 80% writes exactly one alert_log row (and one push); 50% and 100% do the same", async () => {
     const h = harness({ vapid });
     await h.call("/api/push/subscribe", json("POST", await clientSubscription()));
+    await h.call("/api/settings", json("PUT", { nudge_daily_limit: 20 })); // the daily nudge limit has its own tests (allowance.test.ts)
     await setLifestyleBudget(h); // S$100
 
     await spend(h, 4000); // 40%: nothing
@@ -72,18 +73,20 @@ describe("threshold alerts: 50 / 80 / 100%, once per period", () => {
 
     await spend(h, 2000); // 110%
     expect((await alertRows()).map((r) => r.period)).toEqual(["2026-10:100", "2026-10:50", "2026-10:80"]);
-    expect(h.pushes).toHaveLength(3); // 50, 80, 100 each pushed once
+    expect(await count("SELECT COUNT(*) AS n FROM push_outbox WHERE kind = 'budget' AND sent_at IS NOT NULL")).toBe(3); // 50, 80, 100 each pushed once
   });
 
   it("one big purchase jumping several thresholds logs them all but pushes once (the highest)", async () => {
     const h = harness({ vapid });
     await h.call("/api/push/subscribe", json("POST", await clientSubscription()));
+    await h.call("/api/settings", json("PUT", { nudge_daily_limit: 20 }));
     await setLifestyleBudget(h);
     await spend(h, 9000);
     expect((await alertRows()).map((r) => r.period)).toEqual(["2026-10:50", "2026-10:80"]);
-    expect(h.pushes).toHaveLength(1);
+    const budgetPushes = () => count("SELECT COUNT(*) AS n FROM push_outbox WHERE kind = 'budget' AND sent_at IS NOT NULL");
+    expect(await budgetPushes()).toBe(1);
     await spend(h, 100); // still 91%: the logged 50/80 never re-fire
-    expect(h.pushes).toHaveLength(1);
+    expect(await budgetPushes()).toBe(1);
   });
 
   it("is race-free: concurrent checks log each threshold once", async () => {

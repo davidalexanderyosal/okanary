@@ -2,7 +2,7 @@ import type { Deps } from "./deps";
 import type { Env } from "./env";
 import { sendWeeklyDigest } from "./digest";
 import { getSgdRate } from "./fx";
-import { sendPushToAll } from "./push";
+import { flushOutbox, sendNudge } from "./nudge-gate";
 import { runRecurringDetection } from "./recurring";
 import { tripCovering } from "./trips";
 import { nowIso, ulid } from "./util";
@@ -29,7 +29,7 @@ export async function emailHealthAlerts(env: Env, deps: Deps): Promise<string[]>
     const done = await env.DB.prepare("SELECT 1 AS x FROM alert_log WHERE kind = 'email_health' AND ref = ? AND period = ?").bind(bank, period).first();
     if (done) continue;
     await env.DB.prepare("INSERT INTO alert_log (id, kind, ref, period, sent_at) VALUES (?,?,?,?,?)").bind(ulid(), "email_health", bank, period, nowIso()).run();
-    await sendPushToAll(env, deps, { title: "Okanary", body: `No ${bank.toUpperCase()} alert emails for ${Math.floor(days)} days. Check your Gmail forwarding filter.`, url: "/setup", tag: `health-${bank}` });
+    await sendNudge(env, deps, { title: "Okanary", body: `No ${bank.toUpperCase()} alert emails for ${Math.floor(days)} days. Check your Gmail forwarding filter.`, url: "/setup", tag: `health-${bank}` }, "email_health");
     sent.push(bank);
   }
   return sent;
@@ -61,5 +61,6 @@ export async function runScheduled(env: Env, deps: Deps, cron: string): Promise<
     await promoteStalePending(env, deps);
     await emailHealthAlerts(env, deps);
     await refreshFx(env, deps);
+    await flushOutbox(env, deps);
   }
 }

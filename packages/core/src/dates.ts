@@ -117,3 +117,73 @@ export function sgtWeekRangeUtc(now: string | Date | number): { start: string; e
   const start = new Date(midnight.getTime() - sinceMonday * DAY_MS);
   return { start: start.toISOString(), end: new Date(start.getTime() + 7 * DAY_MS).toISOString() };
 }
+
+// ---------- configurable weeks (v2 feature A) ----------
+
+/** Day of week of an SGT calendar date 'YYYY-MM-DD': 0 = Sunday … 6 = Saturday. */
+export function dayOfWeek(date: string): number {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!m) throw new Error(`Invalid date: ${date}`);
+  return new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!)).getUTCDay();
+}
+
+function shiftDate(date: string, days: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!m) throw new Error(`Invalid date: ${date}`);
+  const t = new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]! + days));
+  return `${t.getUTCFullYear()}-${p2(t.getUTCMonth() + 1)}-${p2(t.getUTCDate())}`;
+}
+
+/** Week start day setting: 0 = Sunday, 1 = Monday (default) … 6 = Saturday. Anything invalid falls back to Monday. */
+export function parseWeekStart(v: string | number | null | undefined): number {
+  const n = Number(v);
+  return v != null && v !== "" && Number.isInteger(n) && n >= 0 && n <= 6 ? n : 1;
+}
+
+/** First SGT calendar date of the week containing `date`. */
+export function weekStartDate(date: string, weekStart = 1): string {
+  return shiftDate(date, -((dayOfWeek(date) - weekStart + 7) % 7));
+}
+
+export interface SgtWeek {
+  /** first and last SGT calendar dates of the week (inclusive) */
+  startDate: string;
+  endDate: string;
+  /** [start, end) UTC ISO */
+  start: string;
+  end: string;
+  /** 1-based day of the week for `now` (1 = the week's first day) and days left including today */
+  day: number;
+  daysLeft: number;
+  /** alert_log period label 'YYYY-Www' (ISO week of the week's first day) */
+  label: string;
+}
+
+/** The SGT week (configurable start day) containing the instant. */
+export function sgtWeek(now: string | Date | number, weekStart = 1): SgtWeek {
+  return weekOf(weekStartDate(sgtDate(now), weekStart), sgtDate(now));
+}
+
+/** Week starting on `startDate`; `today` (an SGT date) sets day/daysLeft (clamped to the week). */
+export function weekOf(startDate: string, today: string = startDate): SgtWeek {
+  const endDate = shiftDate(startDate, 6);
+  const idx = today < startDate ? 0 : today > endDate ? 6 : Math.round((Date.parse(today) - Date.parse(startDate)) / DAY_MS);
+  return {
+    startDate, endDate,
+    start: dayRangeUtc(startDate).start, end: dayRangeUtc(endDate).end,
+    day: idx + 1, daysLeft: 7 - idx, label: isoWeekLabel(startDate),
+  };
+}
+
+/** Week immediately before/after the given one (by start date). */
+export const shiftWeek = (startDate: string, weeks: number): string => shiftDate(startDate, weeks * 7);
+
+/** ISO-8601 week label 'YYYY-Www' of a calendar date. */
+export function isoWeekLabel(date: string): string {
+  const dow = dayOfWeek(date) || 7; // Mon=1..Sun=7
+  const thursday = shiftDate(date, 4 - dow);
+  const year = +thursday.slice(0, 4);
+  const jan1 = Date.UTC(year, 0, 1);
+  const week = Math.floor((Date.parse(thursday) - jan1) / DAY_MS / 7) + 1;
+  return `${year}-W${p2(week)}`;
+}

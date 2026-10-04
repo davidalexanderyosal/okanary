@@ -1,4 +1,4 @@
-import type { Account, BudgetRow, Category, CategoryGroup, MonthSummary, Transaction } from "@okanary/core";
+import type { Account, BudgetRow, Category, CategoryGroup, MonthSummary, Transaction, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
 
 export type TxnRowData = Transaction & { group_id: string | null; group_counts_as_spend: number | null };
 export type Summary = MonthSummary & { reviewCount: number; budgets: BudgetRow[] };
@@ -46,6 +46,24 @@ export interface SetupInfo {
   ingest_path: string; token: string | null; last_applepay_at: string | null;
   alerts: { thresholds: number[] };
   push: { configured: boolean; public_key: string | null; subscriptions: number; post_purchase: boolean; weekly_digest: boolean };
+  allowance_settings: { week_start: number; override_minor: number | null; carry: boolean };
+  notifications: { daily_limit: number; quiet_start: string; quiet_end: string };
+}
+/** GET /api/allowance: this week's Lifestyle allowance (v2 A). All amounts SGD minor units. */
+export interface Allowance {
+  week: { startDate: string; endDate: string; day: number; daysLeft: number; label: string };
+  allowance: WeekAllowance;
+  spent: number;
+  safe: WeekSafeToSpend;
+  week_start: number;
+  carry: boolean;
+  override_minor: number | null;
+  month: { budget: number | null; spent: number };
+}
+export interface SettingsInput {
+  push_post_purchase?: boolean; push_weekly_digest?: boolean; alert_thresholds?: number[];
+  week_start?: number; allowance_override_minor?: number | null; allowance_carry?: boolean;
+  nudge_daily_limit?: number; quiet_start?: string; quiet_end?: string;
 }
 
 export const api = {
@@ -76,6 +94,7 @@ export const api = {
   createRule: (r: { pattern: string; category_id: string | null; match_type?: string; set_excluded?: boolean }) => req<RuleRow>("/api/rules", body("POST", r)),
   deleteRule: (id: string) => req<{ ok: true }>(`/api/rules/${id}`, { method: "DELETE" }),
   setup: () => req<SetupInfo>("/api/setup"),
+  allowance: () => req<Allowance>("/api/allowance"),
   budgets: (month: string) => req<{ month: string; budgets: BudgetRow[] }>(`/api/budgets?month=${month}`),
   putBudget: (b: { scope: "group" | "category"; ref_id: string; month: string; amount_sgd_minor: number }) => req<{ month: string; budgets: BudgetRow[] }>("/api/budgets", body("PUT", b)),
   copyBudgets: (from: string, to: string) => req<{ copied: number; budgets: BudgetRow[] }>("/api/budgets/copy", body("POST", { from, to })),
@@ -93,7 +112,7 @@ export const api = {
   patchTrip: (id: string, t: Partial<Trip>) => req<Trip>(`/api/trips/${id}`, body("PATCH", t)),
   deleteTrip: (id: string) => req<{ ok: true }>(`/api/trips/${id}`, { method: "DELETE" }),
   rotateToken: () => req<{ token: string }>("/api/setup/token", { method: "POST" }),
-  putSettings: (s: { push_post_purchase?: boolean; push_weekly_digest?: boolean; alert_thresholds?: number[] }) => req<{ ok: true }>("/api/settings", body("PUT", s)),
+  putSettings: (s: SettingsInput) => req<{ ok: true }>("/api/settings", body("PUT", s)),
   pushSubscribe: (sub: unknown) => req<{ ok: true }>("/api/push/subscribe", body("POST", sub)),
   pushUnsubscribe: (endpoint: string) => req<{ ok: true }>("/api/push/unsubscribe", body("POST", { endpoint })),
   pushTest: () => req<{ delivered: number; configured: boolean }>("/api/push/test", { method: "POST" }),

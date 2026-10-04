@@ -55,7 +55,7 @@ export const count = async (sql: string) => (await env.DB.prepare(sql).first<{ n
 
 export async function resetDb() {
   await env.DB.exec(
-    "DELETE FROM duplicate_candidates; DELETE FROM raw_ingest; DELETE FROM transactions; DELETE FROM merchant_rules; DELETE FROM accounts; DELETE FROM alert_log; DELETE FROM push_subscriptions; DELETE FROM fx_rates; DELETE FROM budgets; DELETE FROM trips;",
+    "DELETE FROM duplicate_candidates; DELETE FROM raw_ingest; DELETE FROM transactions; DELETE FROM merchant_rules; DELETE FROM accounts; DELETE FROM alert_log; DELETE FROM push_subscriptions; DELETE FROM fx_rates; DELETE FROM budgets; DELETE FROM trips; DELETE FROM push_outbox;",
   );
   await env.DB.exec("DELETE FROM settings WHERE key NOT IN ('base_currency','timezone')");
 }

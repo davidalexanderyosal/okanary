@@ -81,7 +81,7 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 | Feature | Status |
 |---|---|
 | Plan (step 1) | DONE |
-| A — Weekly Lifestyle allowance | todo |
+| A — Weekly Lifestyle allowance | DONE |
 | U — "Vs your usual" | todo |
 | N — Net worth | todo |
 | G — Goals | todo |
@@ -89,5 +89,11 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 | S — Subscriptions hub | todo |
 | P — Income & plan | todo |
 
+## A — Weekly Lifestyle allowance: DONE
+- Core: `allowance.ts` (proration per month with exact month sums D-47, override, carry chain D-48, week safe-to-spend), configurable weeks in `dates.ts` (`sgtWeek`, `isoWeekLabel`), `nudge-gate.ts` (limit + quiet hours), push text "— S$96 left this week".
+- Worker: `GET /api/allowance`, settings (`week_start`, `allowance_override_minor`, `allowance_carry`, `nudge_daily_limit`, `quiet_start`, `quiet_end`), weekly 80/100% alerts (`alert_log` period `YYYY-Www`), nudge gate + `push_outbox` (migration 0004) flushed hourly; budget alerts/digest/email-health now go through the gate (D-49).
+- Web: Home Lifestyle card leads with the week (D-51); Settings → Weekly allowance + Notification limit.
+- Tests: core `allowance.test.ts` (proration 31/30/28 days, month and year crossings, Sunday 23:59 SGT, sum check, override, carry on/off, safe-to-spend, push text, gate); worker `allowance.test.ts` (API, settings, weekly alert dedupe, gate limit/quiet/flush/coalesce/expiry, post-purchase exempt); web `allowance.test.ts`.
+
 ## Needs David (v2)
-- Nothing yet beyond the v1 list above; updated per feature.
+- Nothing new for A. Optional: Settings → Weekly allowance (week start, fixed amount, carry-over) and Notification limit.

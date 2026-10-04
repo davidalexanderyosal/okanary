@@ -3,7 +3,7 @@ import { lifestyleBudget } from "./capture";
 import { loadSummaryRows } from "./db";
 import type { Deps } from "./deps";
 import type { Env } from "./env";
-import { sendPushToAll } from "./push";
+import { sendNudge } from "./nudge-gate";
 import { getSetting } from "./settings";
 import { nowIso, ulid } from "./util";
 
@@ -27,6 +27,6 @@ export async function sendWeeklyDigest(env: Env, deps: Deps): Promise<{ sent: bo
     weekTotalSgd: weekTotal, lifestyleSpentSgd: s.byGroup.find((g) => g.id === "lifestyle")?.spent ?? 0,
     lifestyleBudgetSgd: budget, lifestyleExpectedSgd: budget ? expectedByDay(budget, prog.day, prog.daysInMonth) : null, top,
   });
-  await sendPushToAll(env, deps, { title: "Okanary: your week", body, url: "/reports", tag: "weekly-digest" });
+  await sendNudge(env, deps, { title: "Okanary: your week", body, url: "/reports", tag: "weekly-digest" }, "weekly_digest");
   return { sent: true, body };
 }

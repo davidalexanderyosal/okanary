@@ -11,12 +11,14 @@ import { groupColor } from "../components/groups";
 import { Icon } from "../components/Icons";
 import { Mascot } from "../components/Mascot";
 import { ReceiptPaceBar, paceText, paceTextColor } from "../components/PaceBar";
+import { monthLine, safeNote, weekHeadline } from "../lib/allowance";
 import { TxnRow } from "../components/TxnRow";
 
 export function Home() {
   const month = currentMonth();
   const ref = useRefData();
   const summary = useResource(`summary:${month}`, () => api.summary(month));
+  const allowance = useResource("allowance", api.allowance);
   const recent = useResource("recent", () => api.transactions({ limit: 5 }));
   const [editing, setEditing] = useState<TxnRowData | null>(null);
   const s = summary.data;
@@ -33,6 +35,9 @@ export function Home() {
   const lifeBudget = s?.budgets.find((b) => b.scope === "group" && b.ref_id === "lifestyle")?.monthly_amount_sgd_minor ?? 0;
   const pace = s && lifeBudget > 0 ? paceFor(g.lifestyle, lifeBudget, s.day, s.daysInMonth) : null;
   const safe = s && lifeBudget > 0 ? safeToSpendToday(lifeBudget, g.lifestyle, s.daysInMonth - s.day + 1) : null;
+  // Weekly basis (v2 A): leads the Lifestyle card whenever there is a weekly allowance (monthly budget or fixed override).
+  const al = allowance.data?.allowance.hasAllowance ? allowance.data : null;
+  const weekPace = al ? paceFor(al.spent, al.allowance.total, al.week.day, 7) : null;
   const lifestyleShare = s && s.total > 0 ? Math.round((g.lifestyle * 100) / s.total) : 0;
 
   return (
@@ -64,25 +69,42 @@ export function Home() {
         <span aria-hidden lang="ja" className="absolute right-4 top-[44px] grid h-10 w-10 -rotate-12 place-items-center rounded-full border-2 border-stamp text-xs font-extrabold leading-none text-stamp opacity-90">お金</span>
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-sm font-extrabold text-accent">Lifestyle</h2>
-          {pace
+          {weekPace
+            ? <span className={`rounded-full bg-pill px-2.5 py-0.5 text-[11px] font-extrabold ${weekPace.state === "exceeded" ? "text-lifestyle-ink" : paceTextColor[weekPace.state]}`}>{weekPace.state === "exceeded" ? "Over this week" : paceText[weekPace.state]}</span>
+            : pace
             ? <span className={`rounded-full bg-pill px-2.5 py-0.5 text-[11px] font-extrabold ${paceTextColor[pace.state]}`}>{paceText[pace.state]}</span>
             : <span className="text-xs text-muted">{lifestyleShare}% of spend</span>}
         </div>
-        <p className="num mt-1.5 pr-12 text-[30px] leading-[1.1] tracking-tight">
-          {sgd(g.lifestyle)}
-          {pace && <span className="text-[15px] text-muted"> / {sgd(lifeBudget)}</span>}
-        </p>
-        {pace && safe ? (
+        {al && weekPace ? (
           <>
-            <ReceiptPaceBar pace={pace} />
-            <p className={`mt-4 rounded-full border-[1.5px] px-3 py-2 text-[13px] font-bold ${safe.exceeded ? "border-danger/50 bg-danger/10 text-danger" : "border-mint-line bg-mint-bg"}`}>
-              {safe.exceeded
-                ? <>Over budget by <span className="num text-base">{sgd(-safe.remaining)}</span></>
-                : <>Safe to spend today <b className="num text-base font-normal">{sgd(safe.perDay)}</b> <span className="num text-[11px] font-medium text-muted">{sgd(safe.remaining)} over {safe.daysLeft} days</span></>}
+            <p className="num mt-1.5 pr-12 text-[19px] font-bold leading-snug tracking-tight">{weekHeadline({ total: al.allowance.total, spent: al.spent, endDate: al.week.endDate })}</p>
+            <ReceiptPaceBar pace={weekPace} soft marker={{ subject: "this week's allowance", marker: `day ${al.week.day} of 7` }} />
+            <p className="num mt-1 text-xs text-muted">{monthLine(al.month)}</p>
+            <p className={`mt-3 rounded-full border-[1.5px] px-3 py-2 text-[13px] font-bold ${al.safe.over ? "border-lifestyle bg-pill text-lifestyle-ink" : "border-mint-line bg-mint-bg"}`}>
+              {al.safe.over
+                ? <>Allowance used up for this week. No rush, it resets soon.</>
+                : <>Safe to spend today <b className="num text-base font-normal">{sgd(al.safe.perDay)}</b> <span className="num text-[11px] font-medium text-muted">{safeNote(al.safe)}</span></>}
             </p>
           </>
         ) : (
-          <p className="mt-3 text-sm font-bold text-accent">Set a Lifestyle budget to see pace and safe-to-spend ›</p>
+          <>
+            <p className="num mt-1.5 pr-12 text-[30px] leading-[1.1] tracking-tight">
+              {sgd(g.lifestyle)}
+              {pace && <span className="text-[15px] text-muted"> / {sgd(lifeBudget)}</span>}
+            </p>
+            {pace && safe ? (
+              <>
+                <ReceiptPaceBar pace={pace} />
+                <p className={`mt-4 rounded-full border-[1.5px] px-3 py-2 text-[13px] font-bold ${safe.exceeded ? "border-danger/50 bg-danger/10 text-danger" : "border-mint-line bg-mint-bg"}`}>
+                  {safe.exceeded
+                    ? <>Over budget by <span className="num text-base">{sgd(-safe.remaining)}</span></>
+                    : <>Safe to spend today <b className="num text-base font-normal">{sgd(safe.perDay)}</b> <span className="num text-[11px] font-medium text-muted">{sgd(safe.remaining)} over {safe.daysLeft} days</span></>}
+                </p>
+              </>
+            ) : (
+              <p className="mt-3 text-sm font-bold text-accent">Set a Lifestyle budget to see pace and safe-to-spend ›</p>
+            )}
+          </>
         )}
       </Link>
 

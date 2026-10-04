@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Deps } from "./deps";
 import type { AppEnv } from "./env";
 import { accuracy } from "./routes/accuracy";
+import { allowance } from "./routes/allowance";
 import { budgets } from "./routes/budgets";
 import { ingest } from "./routes/ingest";
 import { insights } from "./routes/insights";
@@ -24,6 +25,7 @@ export function createApp(overrides: Partial<Deps> = {}) {
   app.route("/api", budgets);
   app.route("/api", accuracy);
   app.route("/api", insights);
+  app.route("/api", allowance);
   app.route("/api", setup);
   app.route("/api/transactions", transactions);
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));

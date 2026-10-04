@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { Account } from "@okanary/core";
-import { api, type Trip } from "../lib/api";
+import { minorToDecimalString, parseMajorToMinor, type Account } from "@okanary/core";
+import { api, type SetupInfo, type Trip } from "../lib/api";
 import { invalidateAll, useResource } from "../lib/data";
 import { sgd } from "../lib/format";
 import { useRefData } from "../lib/refdata";
@@ -84,11 +84,103 @@ function TripForm({ initial, onDone }: { initial?: Trip; onDone: () => void }) {
   );
 }
 
+const WEEK_DAYS: [number, string][] = [[1, "Monday"], [2, "Tuesday"], [3, "Wednesday"], [4, "Thursday"], [5, "Friday"], [6, "Saturday"], [0, "Sunday"]];
+
+/** Weekly Lifestyle allowance (v2 A). Select and toggle save straight away; the amount saves with its button. */
+function AllowanceSection({ settings }: { settings: SetupInfo["allowance_settings"] }) {
+  const toast = useToast();
+  const allowance = useResource("allowance", api.allowance);
+  const [amount, setAmount] = useState(settings.override_minor ? minorToDecimalString(settings.override_minor, "SGD") : "");
+  const derived = allowance.data?.allowance.derived;
+  const save = (s: Parameters<typeof api.putSettings>[0]) =>
+    api.putSettings(s).then(invalidateAll).catch((e) => toast({ msg: `Couldn't save: ${e instanceof Error ? e.message : e}` }));
+  function saveAmount() {
+    const t = amount.trim();
+    if (t === "") return void save({ allowance_override_minor: null });
+    try {
+      const minor = parseMajorToMinor(t, "SGD");
+      if (minor < 0) throw new Error("negative");
+      setAmount(minor > 0 ? minorToDecimalString(minor, "SGD") : "");
+      void save({ allowance_override_minor: minor > 0 ? minor : null });
+    } catch {
+      toast({ msg: "Enter an amount like 150 or 150.50" });
+    }
+  }
+  return (
+    <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm" aria-label="Weekly allowance">
+      <h2 className="pb-1 text-sm font-semibold text-muted">Weekly allowance</h2>
+      <p className="pb-2 text-xs text-muted">Your monthly Lifestyle budget, split into weeks so one busy week doesn't write off the month.</p>
+      <label className="block text-sm">
+        <span className="block pb-1 font-medium">Week starts on</span>
+        <select className={field} value={settings.week_start} onChange={(e) => void save({ week_start: Number(e.target.value) })}>
+          {WEEK_DAYS.map(([n, name]) => <option key={n} value={n}>{name}</option>)}
+        </select>
+      </label>
+      <div className="mt-3 text-sm">
+        <label htmlFor="allowance-amount" className="block pb-1 font-medium">Fixed weekly amount (optional)</label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">S$</span>
+            <input id="allowance-amount" className={`${field} pl-9`} inputMode="decimal" placeholder="Use my monthly budget" value={amount} onChange={(e) => setAmount(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveAmount()} />
+          </div>
+          <button className="tap rounded-xl bg-accent px-4 font-semibold text-accent-fg" onClick={saveAmount}>Save</button>
+        </div>
+        <p className="pt-1 text-xs text-muted">
+          {derived !== undefined && allowance.data?.allowance.parts.some((p) => p.budget > 0)
+            ? <>From your monthly budget: <span className="num">{sgd(derived, false)}</span>. Leave empty to use it.</>
+            : "Leave empty to use your monthly Lifestyle budget."}
+        </p>
+      </div>
+      <label className="tap mt-2 flex items-start gap-3 text-sm">
+        <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={settings.carry} onChange={(e) => void save({ allowance_carry: e.target.checked })} />
+        <span>Carry unspent/overspent amount to next week (within the same month)</span>
+      </label>
+    </section>
+  );
+}
+
+/** Nudge limit and quiet hours. Purchase notifications are never counted or held. */
+function NotificationSection({ n }: { n: SetupInfo["notifications"] }) {
+  const toast = useToast();
+  const [limit, setLimit] = useState(String(n.daily_limit));
+  const [qs, setQs] = useState(n.quiet_start);
+  const [qe, setQe] = useState(n.quiet_end);
+  const limitNum = Number(limit);
+  const valid = limit.trim() !== "" && Number.isInteger(limitNum) && limitNum >= 0 && limitNum <= 20 && !!qs && !!qe;
+  const dirty = limit !== String(n.daily_limit) || qs !== n.quiet_start || qe !== n.quiet_end;
+  async function save() {
+    try {
+      await api.putSettings({ nudge_daily_limit: limitNum, quiet_start: qs, quiet_end: qe });
+      invalidateAll();
+      toast({ msg: "Saved" });
+    } catch (e) { toast({ msg: `Couldn't save: ${e instanceof Error ? e.message : e}` }); }
+  }
+  return (
+    <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm" aria-label="Notification limit">
+      <h2 className="pb-2 text-sm font-semibold text-muted">Notification limit</h2>
+      <label className="block text-sm">
+        <span className="block pb-1 font-medium">Nudges per day</span>
+        <input type="number" min={0} max={20} step={1} inputMode="numeric" className={`${field} w-28`} value={limit} onChange={(e) => setLimit(e.target.value)} />
+      </label>
+      <p className="pt-1 text-xs text-muted">Purchase notifications are not counted.</p>
+      <div className="mt-3 flex gap-3 text-sm">
+        <label className="flex-1"><span className="block pb-1 font-medium">Quiet hours start</span>
+          <input type="time" className={field} value={qs} onChange={(e) => setQs(e.target.value)} /></label>
+        <label className="flex-1"><span className="block pb-1 font-medium">Quiet hours end</span>
+          <input type="time" className={field} value={qe} onChange={(e) => setQe(e.target.value)} /></label>
+      </div>
+      <p className="pt-1 text-xs text-muted">Held until quiet hours end.</p>
+      <button className="tap mt-3 w-full rounded-xl bg-accent font-semibold text-accent-fg disabled:opacity-40" disabled={!valid || !dirty} onClick={() => void save()}>Save</button>
+    </section>
+  );
+}
+
 export function Settings() {
   const ref = useRefData();
   const rules = useResource("rules", api.rules);
   const toast = useToast();
   const trips = useResource("trips", api.trips);
+  const setup = useResource("setup", api.setup);
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [editingTrip, setEditingTrip] = useState<string | "new" | null>(null);
   const [newCat, setNewCat] = useState<{ group: string; name: string }>({ group: "lifestyle", name: "" });
@@ -155,6 +247,9 @@ export function Settings() {
           </div>
         ))}
       </section>
+
+      {setup.data && <AllowanceSection settings={setup.data.allowance_settings} />}
+      {setup.data && <NotificationSection n={setup.data.notifications} />}
 
       <section className="mt-4 rounded-3xl bg-card p-4 shadow-sm">
         <h2 className="pb-2 text-sm font-semibold text-muted">Merchant rules</h2>

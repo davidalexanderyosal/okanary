@@ -14,3 +14,5 @@ export * from "./recurring";
 export * from "./csv";
 export * from "./statement";
 export * from "./reconcile";
+export * from "./allowance";
+export * from "./nudge-gate";

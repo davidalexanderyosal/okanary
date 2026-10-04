@@ -44,6 +44,10 @@ export async function monthSummary(db: D1Database, month: string, now: Date = ne
   return { ...summary, reviewCount: (rc?.n ?? 0) + (failed?.n ?? 0) + (dups?.n ?? 0), budgets };
 }
 
+export async function loadBudgetRows(db: D1Database): Promise<BudgetRow[]> {
+  return (await db.prepare("SELECT scope, ref_id, monthly_amount_sgd_minor, effective_from FROM budgets").all<BudgetRow>()).results;
+}
+
 export async function getTransaction(db: D1Database, id: string): Promise<Transaction | null> {
   return db.prepare(`SELECT * FROM transactions WHERE id = ?`).bind(id).first<Transaction>();
 }

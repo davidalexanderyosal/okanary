@@ -10,11 +10,18 @@ export interface PurchaseNudge {
   lifestyleBudgetSgd?: number | null;
   day: number;
   daysInMonth: number;
+  /** v2 A: Lifestyle allowance left this week (negative = over). When set, the push uses the week instead of the month. */
+  weekLeftSgd?: number | null;
 }
 
-/** "S$14.50 · Ya Kun · Coffee — Lifestyle S$642 / S$900 (day 14/31)" */
+/** "S$14.50 · Ya Kun · Coffee — S$96 left this week" (v2 A), else
+ *  "S$14.50 · Ya Kun · Coffee — Lifestyle S$642 / S$900 (day 14/31)" */
 export function purchaseNudgeBody(n: PurchaseNudge): string {
   const parts = [formatMoney(n.amountMinor, n.currency), n.merchant, n.categoryName ?? "needs a category"].filter(Boolean);
+  if (n.weekLeftSgd != null) {
+    const left = n.weekLeftSgd >= 0 ? `${formatMoneyShort(n.weekLeftSgd, "SGD")} left this week` : `${formatMoneyShort(-n.weekLeftSgd, "SGD")} over this week's allowance`;
+    return `${parts.join(" · ")} — ${left}`;
+  }
   const life = n.lifestyleBudgetSgd
     ? `Lifestyle ${formatMoney(n.lifestyleSpentSgd, "SGD", { compact: true })} / ${formatMoney(n.lifestyleBudgetSgd, "SGD", { compact: true })}`
     : `Lifestyle ${formatMoney(n.lifestyleSpentSgd, "SGD", { compact: true })}`;

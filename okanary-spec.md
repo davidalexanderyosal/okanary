@@ -75,7 +75,7 @@ Features were picked from what established apps do (Copilot Money, Monarch, YNAB
 
 ### 3.3 Deliberately left out
 
-Net worth, investment tracking, bill-pay reminders for non-card bills, shared/household budgets, gamified streaks, receipt OCR, and AI chat. They add build time without directly helping "see and control day-to-day spend". Can be revisited later.
+~~Net worth, investment tracking~~ (added in v2, see §13), bill-pay reminders for non-card bills, shared/household budgets, gamified streaks, receipt OCR, and AI chat. They add build time without directly helping "see and control day-to-day spend". Can be revisited later.
 
 ---
 
@@ -355,6 +355,16 @@ Later phases follow the same pattern: "Phase N of okanary-spec.md is implemented
 After Phase 1 is working, start the next session with: *"Read okanary-spec.md and the existing code. Implement Phase 2 only."* and so on per phase.
 
 ---
+
+## 13. v2 features (docs/feature-brief-v2.md)
+
+Built in the order A → U → N → G → W → S → P; mapping and conflicts in `docs/plan-v2.md`, decisions D-47 onward.
+
+### 13.A Weekly Lifestyle allowance (built)
+- Week = SGT, start day configurable (default Monday). Allowance = Σ over the months the week touches of `budget × days ÷ days_in_month` (cumulative rounding, exact month sums), or a fixed weekly override. Optional carry-over within a month (default off).
+- Home Lifestyle card leads with "This week: S$X left of S$Y · resets Mon"; safe-to-spend today = (allowance − spent this week) ÷ days left in the week. Post-purchase push: "… — S$96 left this week".
+- Weekly alerts at 80% and 100% of the allowance, once per week (`alert_log` period `YYYY-Www`); monthly budget alerts unchanged.
+- Notification limit: max 2 nudge pushes per SGT day, quiet hours 23:00–08:00 (held, then sent); both configurable; post-purchase pushes exempt. Table `push_outbox`.
 
 ## Sources
 

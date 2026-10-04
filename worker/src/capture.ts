@@ -3,6 +3,7 @@ import { categorise, type Categorisation } from "./categorise";
 import type { Deps } from "./deps";
 import { loadSummaryRows } from "./db";
 import type { Env } from "./env";
+import { loadWeekAllowance } from "./allowance";
 import { getSgdRate } from "./fx";
 import { sendPushToAll } from "./push";
 import { getSetting } from "./settings";
@@ -149,20 +150,27 @@ export async function mergeDuplicatePair(db: D1Database, candidateId: string): P
   return (await db.prepare("SELECT * FROM transactions WHERE id = ?").bind(apple.id).first<Transaction>()) ?? null;
 }
 
-/** Push "S$14.50 · Ya Kun · Coffee — Lifestyle S$642 (day 14/31)" after a newly auto-captured transaction (spec §7). */
-export async function pushPurchaseNudge(env: Env, deps: Deps, t: Transaction): Promise<void> {
-  if ((await getSetting(env.DB, "push_post_purchase")) === "0") return;
+/** Text of the post-purchase push: "S$14.50 · Ya Kun · Coffee — S$96 left this week" (v2 A), or the month form when there is no allowance. */
+export async function buildPurchaseNudgeBody(env: Env, deps: Deps, t: Transaction): Promise<string> {
   const month = sgtMonth(t.occurred_at);
   const rows = await loadSummaryRows(env.DB, month);
   const s = summarizeMonth(rows, month, deps.now());
   const prog = monthProgress(deps.now());
   const lifestyle = s.byGroup.find((g) => g.id === "lifestyle")?.spent ?? 0;
   const cat = t.category_id ? (await env.DB.prepare("SELECT name FROM categories WHERE id = ?").bind(t.category_id).first<{ name: string }>())?.name ?? null : null;
-  const body = purchaseNudgeBody({
+  const wk = await loadWeekAllowance(env.DB, deps.now());
+  return purchaseNudgeBody({
     amountMinor: t.amount_minor, currency: t.currency, merchant: t.merchant, categoryName: cat,
     lifestyleSpentSgd: lifestyle, lifestyleBudgetSgd: await lifestyleBudget(env.DB, month),
     day: prog.day, daysInMonth: prog.daysInMonth,
+    weekLeftSgd: wk.allowance.hasAllowance ? wk.allowance.total - wk.spent : null,
   });
+}
+
+/** Post-purchase push after a newly auto-captured transaction (spec §7). Exempt from the nudge gate (limit, quiet hours). */
+export async function pushPurchaseNudge(env: Env, deps: Deps, t: Transaction): Promise<void> {
+  if ((await getSetting(env.DB, "push_post_purchase")) === "0") return;
+  const body = await buildPurchaseNudgeBody(env, deps, t);
   await sendPushToAll(env, deps, { title: "Okanary", body, url: `/transactions?edit=${t.id}`, tag: "purchase" });
 }
 

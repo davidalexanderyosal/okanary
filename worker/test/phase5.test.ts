@@ -64,6 +64,7 @@ describe("weekly digest (Sunday 20:00 SGT)", () => {
   it("pushes week total, Lifestyle vs pace and the biggest 3 purchases, once per week", async () => {
     const h = harness({ vapid, now: SUNDAY });
     await h.call("/api/push/subscribe", json("POST", await clientSubscription()));
+    await h.call("/api/settings", json("PUT", { nudge_daily_limit: 20 })); // seeding trips budget alerts; keep the gate out of this test
     await seed(h);
     h.pushes.length = 0;
     const out = await sendWeeklyDigest(h.e, h.deps);
