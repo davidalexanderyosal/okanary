@@ -71,3 +71,23 @@ Totals at the end: 124 core + 100 worker + 10 web unit/integration tests passing
 - PDF statements must be pasted as text (no in-app PDF parsing).
 - No Playwright/iPhone end-to-end suite; the UI was checked with headless Chromium at 390×844 only.
 - A foreign purchase recorded in SGD and billed >6% away still imports as a new line (shows up in the preview before you apply).
+
+---
+
+# v2 (docs/feature-brief-v2.md): A → U → N → G → W → S → P
+
+Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed.
+
+| Feature | Status |
+|---|---|
+| Plan (step 1) | DONE |
+| A — Weekly Lifestyle allowance | todo |
+| U — "Vs your usual" | todo |
+| N — Net worth | todo |
+| G — Goals | todo |
+| W — Want list | todo |
+| S — Subscriptions hub | todo |
+| P — Income & plan | todo |
+
+## Needs David (v2)
+- Nothing yet beyond the v1 list above; updated per feature.
