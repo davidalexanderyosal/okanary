@@ -366,6 +366,10 @@ Built in the order A → U → N → G → W → S → P; mapping and conflicts 
 - Weekly alerts at 80% and 100% of the allowance, once per week (`alert_log` period `YYYY-Www`); monthly budget alerts unchanged.
 - Notification limit: max 2 nudge pushes per SGT day, quiet hours 23:00–08:00 (held, then sent); both configurable; post-purchase pushes exempt. Table `push_outbox`.
 
+### 13.U "Vs your usual" (built)
+- Month: spend to day d vs the average of days 1..min(d, length) over the last 3 complete months with data ("based on N months"; none → "Not enough history yet"). Week: first k days vs the last 4 complete weeks. Total, Lifestyle and each category (categories in Reports only); excluded trips left out; under ±5% = "about usual".
+- Home: "S$640 so far · 12% below your usual by day 14" (amber only when above). Lifestyle card: "Week: about usual". Reports: per-category vs usual. Weekly digest: "Lifestyle this week S$210 · usual S$185". API `GET /api/usual`.
+
 ## Sources
 
 - [Apple Pay expense tracking with Shortcuts Wallet automation — CashJot](https://www.cashjot.com/blog/apple-pay-expense-tracking)

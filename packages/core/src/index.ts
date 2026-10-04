@@ -16,3 +16,4 @@ export * from "./statement";
 export * from "./reconcile";
 export * from "./allowance";
 export * from "./nudge-gate";
+export * from "./baseline";

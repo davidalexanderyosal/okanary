@@ -7,6 +7,7 @@ import { monthLabel, prettyMerchant, sgd, shortDate } from "../lib/format";
 import { currentMonth } from "../lib/month";
 import { useRefData } from "../lib/refdata";
 import { groupColor } from "../components/groups";
+import { NO_HISTORY_TEXT, usualDiffText, usualToneClass } from "../lib/usual";
 import { MonthStepper } from "./Transactions";
 
 type Tab = "overview" | "daily" | "merchants" | "trend" | "cards";
@@ -63,6 +64,46 @@ function Overview({ s }: { s: Summary }) {
         </div>
       </section>
     </>
+  );
+}
+
+/** "Vs your usual" (v2 U): each category this month to date against the average of the same days in recent months. */
+function VsUsual() {
+  const ref = useRefData();
+  const u = useResource("usual", api.usual).data;
+  if (!u) return null;
+  const { month } = u;
+  const none = month.total.comparison.state === "no_history";
+  const max = Math.max(...month.categories.map((c) => Math.max(c.current, c.usual ?? 0)), 1);
+  return (
+    <Card title="Vs your usual">
+      {none ? (
+        <p className="py-2 text-sm text-muted">{NO_HISTORY_TEXT}</p>
+      ) : (
+        <>
+          <p className="pb-2 text-xs text-muted">Day 1 to {month.day} of this month vs the same days in recent months{` (based on ${month.periods.length} ${month.periods.length === 1 ? "month" : "months"})`}.</p>
+          <div className="space-y-3">
+            {month.categories.map((c) => {
+              const d = usualDiffText(c);
+              return (
+                <div key={c.id}>
+                  <div className="flex justify-between gap-2 text-sm">
+                    <span className="truncate">{ref.categoryMap.get(c.id)?.name ?? "Uncategorised"}</span>
+                    <span className="num shrink-0 font-medium">{sgd(c.current)} <span className="text-xs font-normal text-muted">vs {sgd(c.usual ?? 0)}</span> <span className={`text-xs font-normal ${usualToneClass[d.tone]}`}>{d.text}</span></span>
+                  </div>
+                  <div className="relative mt-1 h-2 overflow-hidden rounded-full bg-line">
+                    <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${(c.current * 100) / max}%`, background: d.tone === "amber" ? "var(--lifestyle)" : "var(--accent)" }} />
+                    <div className="absolute inset-y-0 w-0.5 bg-fg/60" style={{ left: `${Math.min(((c.usual ?? 0) * 100) / max, 100)}%` }} aria-hidden />
+                  </div>
+                </div>
+              );
+            })}
+            {month.categories.length === 0 && <p className="text-sm text-muted">No spend yet this month.</p>}
+          </div>
+          <p className="pt-2 text-xs text-muted">Bar: this month so far · tick: your usual.</p>
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -226,6 +267,7 @@ export function Reports() {
         ))}
       </div>
       {tab === "overview" && s && <Overview s={s} />}
+      {tab === "overview" && s && month === currentMonth() && <VsUsual />}
       {tab === "daily" && s && <Daily s={s} month={month} />}
       {tab === "merchants" && s && <Merchants s={s} />}
       {tab === "trend" && s && <Trend month={month} s={s} />}

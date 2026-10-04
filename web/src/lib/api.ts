@@ -1,4 +1,4 @@
-import type { Account, BudgetRow, Category, CategoryGroup, MonthSummary, Transaction, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
+import type { Account, BudgetRow, Category, CategoryGroup, MonthSummary, Transaction, UsualResult, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
 
 export type TxnRowData = Transaction & { group_id: string | null; group_counts_as_spend: number | null };
 export type Summary = MonthSummary & { reviewCount: number; budgets: BudgetRow[] };
@@ -41,6 +41,11 @@ export interface CycleInfo {
 }
 export interface DuplicateCard { id: string; txn: TxnRowData; other: TxnRowData }
 export interface RawRow { id: string; source: string; received_at: string; parse_status: string | null; error: string | null; transaction_id: string | null; preview: string | null }
+/** GET /api/usual: "vs your usual" (v2 U). `periods` = the complete months/weeks averaged; `categories` sorted by largest increase. */
+export interface UsualResponse {
+  month: { day: number; periods: string[]; total: UsualResult; lifestyle: UsualResult; categories: ({ id: string } & UsualResult)[] };
+  week: { day: number; periods: string[]; total: UsualResult; lifestyle: UsualResult };
+}
 export interface SetupInfo {
   email: { forward_configured: boolean; banks: Record<string, { last_at: string; failed: number }> };
   ingest_path: string; token: string | null; last_applepay_at: string | null;
@@ -95,6 +100,7 @@ export const api = {
   deleteRule: (id: string) => req<{ ok: true }>(`/api/rules/${id}`, { method: "DELETE" }),
   setup: () => req<SetupInfo>("/api/setup"),
   allowance: () => req<Allowance>("/api/allowance"),
+  usual: () => req<UsualResponse>("/api/usual"),
   budgets: (month: string) => req<{ month: string; budgets: BudgetRow[] }>(`/api/budgets?month=${month}`),
   putBudget: (b: { scope: "group" | "category"; ref_id: string; month: string; amount_sgd_minor: number }) => req<{ month: string; budgets: BudgetRow[] }>("/api/budgets", body("PUT", b)),
   copyBudgets: (from: string, to: string) => req<{ copied: number; budgets: BudgetRow[] }>("/api/budgets/copy", body("POST", { from, to })),

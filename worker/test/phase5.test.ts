@@ -74,6 +74,8 @@ describe("weekly digest (Sunday 20:00 SGT)", () => {
     expect(out.body).toContain("Biggest: Uniqlo S$128, Ntuc Fairprice S$96, Din Tai Fung S$78");
     expect(out.body).toContain("/ S$900 (pace S$319)"); // floor(90000 * 11 / 31) = 31935 -> S$319
     expect(out.body).not.toContain("Splurge");
+    // Lifestyle this week (5-11 Oct) = 128 + 78 + 5 = S$211; usual = the one complete earlier week with data (28 Sep-4 Oct: the S$999.99 splurge)
+    expect(out.body).toMatch(/ · Lifestyle this week S\$211 · usual S\$1,?000$/);
     expect(h.pushes).toHaveLength(1);
     expect((await sendWeeklyDigest(h.e, h.deps)).sent).toBe(false); // already sent this week
     expect(await count("SELECT COUNT(*) AS n FROM alert_log WHERE kind = 'weekly_digest'")).toBe(1);

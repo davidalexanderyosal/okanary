@@ -12,6 +12,7 @@ import { Icon } from "../components/Icons";
 import { Mascot } from "../components/Mascot";
 import { ReceiptPaceBar, paceText, paceTextColor } from "../components/PaceBar";
 import { monthLine, safeNote, weekHeadline } from "../lib/allowance";
+import { monthUsualLine, usualToneClass, weekUsualText } from "../lib/usual";
 import { TxnRow } from "../components/TxnRow";
 
 export function Home() {
@@ -19,6 +20,7 @@ export function Home() {
   const ref = useRefData();
   const summary = useResource(`summary:${month}`, () => api.summary(month));
   const allowance = useResource("allowance", api.allowance);
+  const usual = useResource("usual", api.usual);
   const recent = useResource("recent", () => api.transactions({ limit: 5 }));
   const [editing, setEditing] = useState<TxnRowData | null>(null);
   const s = summary.data;
@@ -38,6 +40,10 @@ export function Home() {
   // Weekly basis (v2 A): leads the Lifestyle card whenever there is a weekly allowance (monthly budget or fixed override).
   const al = allowance.data?.allowance.hasAllowance ? allowance.data : null;
   const weekPace = al ? paceFor(al.spent, al.allowance.total, al.week.day, 7) : null;
+  const u = usual.data;
+  const monthUsual = u ? monthUsualLine(u.month.total, u.month.day, u.month.periods.length) : null;
+  const weekUsual = u ? weekUsualText(u.week.lifestyle) : null;
+  const weekUsualEl = weekUsual && <p className={`num mt-1 text-xs ${usualToneClass[weekUsual.tone]}`}>{weekUsual.text}</p>;
   const lifestyleShare = s && s.total > 0 ? Math.round((g.lifestyle * 100) / s.total) : 0;
 
   return (
@@ -48,10 +54,11 @@ export function Home() {
           <h1 className="mt-2.5 text-[13px] font-bold text-muted">Spent this month</h1>
           <p className="big-num text-[44px] leading-[1.05]" style={{ textShadow: "0 2px 0 var(--card)" }}>{s ? sgd(s.total) : "…"}</p>
           {s && s.totalLastMonthToDate > 0 && (
-            <p className={`num mt-1 text-xs ${delta > 0 ? "text-danger" : "text-good"}`}>
+            <p className={`num mt-1 text-xs ${delta > 0 ? "text-lifestyle-ink" : "text-good"}`}>
               {delta === 0 ? "Same as" : `${sgd(Math.abs(delta))} ${delta > 0 ? "more" : "less"} than`} this day last month
             </p>
           )}
+          {monthUsual && <p className={`num mt-1 text-xs ${usualToneClass[monthUsual.tone]}`}>{monthUsual.text}</p>}
         </div>
         <div className="flex shrink-0 flex-col items-end">
           <Link to="/settings" aria-label="Settings" className="tap -mr-2 -mt-2 grid place-items-center text-muted active:text-fg"><Icon name="gear" className="h-[22px] w-[22px]" /></Link>
@@ -80,6 +87,7 @@ export function Home() {
             <p className="num mt-1.5 pr-12 text-[19px] font-bold leading-snug tracking-tight">{weekHeadline({ total: al.allowance.total, spent: al.spent, endDate: al.week.endDate })}</p>
             <ReceiptPaceBar pace={weekPace} soft marker={{ subject: "this week's allowance", marker: `day ${al.week.day} of 7` }} />
             <p className="num mt-1 text-xs text-muted">{monthLine(al.month)}</p>
+            {weekUsualEl}
             <p className={`mt-3 rounded-full border-[1.5px] px-3 py-2 text-[13px] font-bold ${al.safe.over ? "border-lifestyle bg-pill text-lifestyle-ink" : "border-mint-line bg-mint-bg"}`}>
               {al.safe.over
                 ? <>Allowance used up for this week. No rush, it resets soon.</>
@@ -92,10 +100,11 @@ export function Home() {
               {sgd(g.lifestyle)}
               {pace && <span className="text-[15px] text-muted"> / {sgd(lifeBudget)}</span>}
             </p>
+            {weekUsualEl}
             {pace && safe ? (
               <>
                 <ReceiptPaceBar pace={pace} />
-                <p className={`mt-4 rounded-full border-[1.5px] px-3 py-2 text-[13px] font-bold ${safe.exceeded ? "border-danger/50 bg-danger/10 text-danger" : "border-mint-line bg-mint-bg"}`}>
+                <p className={`mt-4 rounded-full border-[1.5px] px-3 py-2 text-[13px] font-bold ${safe.exceeded ? "border-lifestyle bg-pill text-lifestyle-ink" : "border-mint-line bg-mint-bg"}`}>
                   {safe.exceeded
                     ? <>Over budget by <span className="num text-base">{sgd(-safe.remaining)}</span></>
                     : <>Safe to spend today <b className="num text-base font-normal">{sgd(safe.perDay)}</b> <span className="num text-[11px] font-medium text-muted">{sgd(safe.remaining)} over {safe.daysLeft} days</span></>}

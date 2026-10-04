@@ -82,7 +82,7 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 |---|---|
 | Plan (step 1) | DONE |
 | A — Weekly Lifestyle allowance | DONE |
-| U — "Vs your usual" | todo |
+| U — "Vs your usual" | DONE |
 | N — Net worth | todo |
 | G — Goals | todo |
 | W — Want list | todo |
@@ -94,6 +94,12 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 - Worker: `GET /api/allowance`, settings (`week_start`, `allowance_override_minor`, `allowance_carry`, `nudge_daily_limit`, `quiet_start`, `quiet_end`), weekly 80/100% alerts (`alert_log` period `YYYY-Www`), nudge gate + `push_outbox` (migration 0004) flushed hourly; budget alerts/digest/email-health now go through the gate (D-49).
 - Web: Home Lifestyle card leads with the week (D-51); Settings → Weekly allowance + Notification limit.
 - Tests: core `allowance.test.ts` (proration 31/30/28 days, month and year crossings, Sunday 23:59 SGT, sum check, override, carry on/off, safe-to-spend, push text, gate); worker `allowance.test.ts` (API, settings, weekly alert dedupe, gate limit/quiet/flush/coalesce/expiry, post-purchase exempt); web `allowance.test.ts`.
+
+## U — "Vs your usual": DONE
+- Core `baseline.ts`: `monthVsUsual` (last 3 complete months with data, days 1..min(d, len)), `weekVsUsual` (last 4 complete weeks, first k days), `compareToUsual` (±5% band), `categoriesVsUsual`, `weekUsualLine`, `monthlyAverage` (used by G/P) (D-52).
+- Worker `GET /api/usual` (month: total, Lifestyle, categories; week: total, Lifestyle); weekly digest gains "Lifestyle this week S$210 · usual S$185".
+- Web: Home line under the month total (neutral, amber when above), Lifestyle card "Week: about usual", Reports "Vs your usual" per-category card (current month).
+- Tests: core `baseline.test.ts` (0/1/2/3+ months, day 31 vs shorter months, trip exclusion, ±5% band, week baseline), worker `usual.test.ts`, web `usual.test.ts`, digest line in `phase5.test.ts`.
 
 ## Needs David (v2)
 - Nothing new for A. Optional: Settings → Weekly allowance (week start, fixed amount, carry-over) and Notification limit.
