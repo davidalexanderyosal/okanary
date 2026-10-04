@@ -87,7 +87,7 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 | G — Goals | DONE |
 | W — Want list | DONE |
 | S — Subscriptions hub | DONE |
-| P — Income & plan | todo |
+| P — Income & plan | DONE |
 
 ## A — Weekly Lifestyle allowance: DONE
 - Core: `allowance.ts` (proration per month with exact month sums D-47, override, carry chain D-48, week safe-to-spend), configurable weeks in `dates.ts` (`sgtWeek`, `isoWeekLabel`), `nudge-gate.ts` (limit + quiet hours), push text "— S$96 left this week".
@@ -128,10 +128,28 @@ Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed
 - Web: Subscriptions hub (totals, to-confirm, needs-a-look flags, cost in goal terms, add/edit from catalogue incl. trials, cancel intent opens the service page, "Still using?" check), links from Budgets and Reports.
 - Tests: core `subscriptions.test.ts` (+ updated detection in `phase5.test.ts`), worker `subscriptions.test.ts`, `receipts.test.ts`, `parsers.test.ts`, web `subscriptions.test.ts`.
 
+## P — Income & personalised plan: DONE
+- Migration 0009 (income_settings, income_events, plans, lifestyle_bonus).
+- Core `plan.ts`: `buildPlan` (fixed costs with overrides, goals waterfall, floor/cap, overflow, computed trade-offs, largest-remainder percentages, reference splits) (D-68, D-69), `commissionSplit` (D-70), `planVsActual`.
+- Worker: `/api/income*` (base take-home, commission/bonus events with proposed split → confirm creates pledges + a guilt-free `lifestyle_bonus` on this week's allowance), `/api/plan*` (inputs from S fixed costs, U-style baselines, G goals; accept writes the Lifestyle budget → A's allowance and goals' planned monthly; settings), monthly check-in lines in the 1st-of-month summary.
+- Web: Plan tab (income card, commission splits to confirm, split bar, fixed lines with overrides, per-goal contributions, trade-off cards, assumptions + "Estimates, not financial advice."), onboarding wizard, Home plan line, Settings income row.
+- Tests: core `plan.test.ts`, worker `plan.test.ts`, web `plan.test.ts`.
+
 ## Needs David (v2)
+- **After deploying P:** open Money → Plan and run the onboarding wizard (base take-home after CPF, confirm subscriptions and fixed costs, goals incl. the suggested emergency fund, accept the plan).
 - **Apple receipt sample (before relying on S's Apple labelling):** forward one Apple subscription receipt to yourself, redact it, save it as `worker/fixtures/apple-receipt-1.txt` (and add Google Play / Netflix / Spotify receipts if you get them); the Apple parser is UNVERIFIED until checked against it.
 - Gmail: extend the forwarding filter to send Apple receipts (`no_reply@email.apple.com`) and service receipts (Netflix, Spotify, …) to `spend@<domain>`.
 - **Price API keys (before deploying N):** create free keys at Finnhub (finnhub.io), Alpha Vantage (alphavantage.co) and CoinGecko (Demo plan), then `npx wrangler secret put FINNHUB_API_KEY`, `ALPHAVANTAGE_API_KEY`, `COINGECKO_API_KEY`. Without a key that source is skipped (stocks fall back to Alpha Vantage; crypto has no fallback).
 - Apply migrations 0004+ remotely (`npm run db:migrate:remote`) and deploy; the new 06:30 SGT cron is in `wrangler.jsonc`.
 - Enter net-worth accounts, balances and holdings (Money → Net worth).
 - Nothing new for A. Optional: Settings → Weekly allowance (week start, fixed amount, carry-over) and Notification limit.
+
+## v2 status summary
+All seven features (A, U, N, G, W, S, P) are implemented, tested locally and committed one per feature on `claude/cool-goldberg-e9ec40`. Nothing was deployed and no remote Cloudflare resource or external API was called (all price/FX/AI calls are mocked in tests).
+Totals: 225 core + 265 worker + 140 web tests passing; web and worker builds exit 0; migrations 0004–0009 apply to the local D1.
+
+### Known limitations (v2)
+- The new screens (Net worth, Goals, Plan + wizard, Want list, Subscriptions hub, Home lines) were type-checked, unit-tested and built but not opened in a browser or on the iPhone.
+- The Apple receipt parser is UNVERIFIED (synthetic fixtures only); generic receipts depend on Workers AI (remote-only, faked in tests).
+- Push actions (Transferred / Skip on pledge notifications) call the API from the service worker with the Access cookie; check on the phone that Cloudflare Access lets those requests through.
+- Price APIs were never called for real: verify the Finnhub / Alpha Vantage / CoinGecko responses once the keys exist ("Refresh now" on the Net worth tab).

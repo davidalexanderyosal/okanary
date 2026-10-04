@@ -5,10 +5,12 @@ import { accuracy } from "./routes/accuracy";
 import { allowance } from "./routes/allowance";
 import { budgets } from "./routes/budgets";
 import { goals } from "./routes/goals";
+import { income } from "./routes/income";
 import { ingest } from "./routes/ingest";
 import { insights } from "./routes/insights";
 import { meta } from "./routes/meta";
 import { networth } from "./routes/networth";
+import { plan } from "./routes/plan";
 import { review } from "./routes/review";
 import { setup } from "./routes/setup";
 import { subscriptions } from "./routes/subscriptions";
@@ -37,6 +39,8 @@ export function createApp(overrides: Partial<Deps> = {}) {
   app.route("/api", setup);
   app.route("/api", wants);
   app.route("/api", subscriptions);
+  app.route("/api", income);
+  app.route("/api", plan);
   app.route("/api/transactions", transactions);
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));
   app.onError((err, c) => {

@@ -181,6 +181,7 @@ export function Settings() {
   const toast = useToast();
   const trips = useResource("trips", api.trips);
   const setup = useResource("setup", api.setup);
+  const incomeBase = useResource("income", api.income).data?.base;
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [editingTrip, setEditingTrip] = useState<string | "new" | null>(null);
   const [newCat, setNewCat] = useState<{ group: string; name: string }>({ group: "lifestyle", name: "" });
@@ -262,7 +263,11 @@ export function Settings() {
         ))}
       </section>
 
-      <Link to="/subscriptions" className="tap mt-4 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Subscriptions</span><span className="text-muted">›</span></Link>
+      <Link to="/money/plan" className="tap mt-4 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm">
+        <span>Income{incomeBase ? <span className="num ml-2 text-sm font-normal text-muted">{sgd(incomeBase.base_takehome_minor)}/mo take-home</span> : <span className="ml-2 text-sm font-normal text-muted">not set</span>}</span>
+        <span className="text-muted">›</span>
+      </Link>
+      <Link to="/subscriptions" className="tap mt-3 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Subscriptions</span><span className="text-muted">›</span></Link>
       <Link to="/import" className="tap mt-3 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Import a card statement</span><span className="text-muted">›</span></Link>
       <Link to="/setup" className="tap mt-3 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Auto-capture &amp; notifications</span><span className="text-muted">›</span></Link>
       <a href="/api/export/transactions.csv" download className="tap mt-3 flex items-center justify-between rounded-3xl bg-card p-4 font-medium shadow-sm"><span>Export all transactions (CSV)</span><span className="text-muted">↓</span></a>

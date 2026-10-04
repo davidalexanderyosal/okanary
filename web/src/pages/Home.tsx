@@ -15,6 +15,7 @@ import { homeNetWorthLine } from "../lib/networth";
 import { monthLine, safeNote, weekHeadline } from "../lib/allowance";
 import { monthUsualLine, usualToneClass, weekUsualText } from "../lib/usual";
 import { TxnRow } from "../components/TxnRow";
+import { homePlanLine } from "../lib/plan";
 import { notBoughtText, wantsAddLink } from "../lib/wants";
 
 export function Home() {
@@ -25,6 +26,7 @@ export function Home() {
   const usual = useResource("usual", api.usual);
   const networth = useResource("networth", api.networth);
   const goals = useResource("goals", api.goals);
+  const plan = useResource(`plan:${month}`, () => api.plan(month));
   const wantStats = useResource("wantStats", api.wantStats);
   const recent = useResource("recent", () => api.transactions({ limit: 5 }));
   const [editing, setEditing] = useState<TxnRowData | null>(null);
@@ -52,6 +54,7 @@ export function Home() {
   const nw = networth.data;
   const nwLine = nw?.latest && (nw.accounts.length > 0 || nw.latest.net !== 0) ? homeNetWorthLine(nw.latest.net, nw.change.month?.change) : null;
   const goalsLine = goals.data && goals.data.goals.length > 0 ? goals.data.summary : null;
+  const planLine = homePlanLine(plan.data);
   const notBought = notBoughtText(wantStats.data);
   const lifestyleShare = s && s.total > 0 ? Math.round((g.lifestyle * 100) / s.total) : 0;
 
@@ -144,6 +147,12 @@ export function Home() {
       {goalsLine && (
         <Link to="/money/goals" className="tap num mt-2 flex items-center justify-between rounded-full bg-card px-4 text-[13px] shadow-sm active:bg-line/40" aria-label="Goals">
           <span>{goalsLine}</span><span aria-hidden className="text-accent">›</span>
+        </Link>
+      )}
+
+      {planLine && (
+        <Link to="/money/plan" className="tap num mt-2 flex items-center justify-between rounded-full bg-card px-4 text-[13px] shadow-sm active:bg-line/40" aria-label="Plan">
+          <span>{planLine}</span><span aria-hidden className="text-accent">›</span>
         </Link>
       )}
 

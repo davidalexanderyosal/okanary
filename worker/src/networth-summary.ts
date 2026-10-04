@@ -3,6 +3,7 @@ import type { Deps } from "./deps";
 import type { Env } from "./env";
 import { loadGoals } from "./goals";
 import { sendNudge } from "./nudge-gate";
+import { planSummaryLines } from "./plan";
 import { nowIso, ulid } from "./util";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -10,10 +11,10 @@ const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "Ju
 /** Explicit sign: "+S$1,240" / "-S$300". */
 const signed = (minor: number) => (minor > 0 ? "+" : "") + formatMoneyShort(minor);
 
-/** Extra lines for the monthly summary: feature G adds the goals line, feature P will add the plan check-in. */
+/** Extra lines for the monthly summary: the goals line (G) and the plan check-in, new plan and commission splits to confirm (P). */
 export async function monthlySummaryExtras(env: Env, deps: Deps): Promise<string[]> {
   const line = (await loadGoals(env.DB, deps.now())).summary;
-  return line ? [line] : [];
+  return [...(line ? [line] : []), ...(await planSummaryLines(env.DB, deps.now()))];
 }
 
 /** Accounts whose latest balance is older than BALANCE_STALE_DAYS (the one reminder; the net worth screen shows a chip). */

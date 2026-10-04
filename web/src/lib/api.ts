@@ -1,4 +1,4 @@
-import type { Account, CatalogueItem, Cycle, SubStatus, Breakdown, BudgetRow, CardLiability, FundingType, GoalKind, GoalState, GoalStatus, Horizon, NwKind, Category, CategoryGroup, MonthSummary, Transaction, UsualResult, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
+import type { CommissionSplit, PlanInput, PlanOutput, SplitRule, Account, CatalogueItem, Cycle, SubStatus, Breakdown, BudgetRow, CardLiability, FundingType, GoalKind, GoalState, GoalStatus, Horizon, NwKind, Category, CategoryGroup, MonthSummary, Transaction, UsualResult, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
 
 export type TxnRowData = Transaction & { group_id: string | null; group_counts_as_spend: number | null };
 export type Summary = MonthSummary & { reviewCount: number; budgets: BudgetRow[] };
@@ -185,6 +185,33 @@ export interface GoalInput {
 }
 export interface GoalFundingInput { source_type: FundingType; source_id: string; share_bp?: number; earmark_minor?: number }
 
+// ---- Income & plan (v2 P) ----
+export type IncomeKind = "commission" | "bonus" | "other";
+export type SplitStatus = "proposed" | "confirmed" | "skipped";
+export interface IncomeSetting { id: string; base_takehome_minor: number; currency: string; effective_from: string }
+export interface IncomeEvent {
+  id: string; kind: IncomeKind; amount_minor: number; received_on: string; transaction_id: string | null;
+  split_json: string | null; split_status: SplitStatus; split: CommissionSplit | null;
+}
+export interface IncomeCandidate { id: string; occurred_at: string; merchant: string | null; category_id: string | null; amount_sgd_minor: number; currency: string; amount_minor: number }
+export interface IncomeResponse { base: IncomeSetting | null; history: IncomeSetting[]; events: IncomeEvent[]; candidates: IncomeCandidate[]; split_rule: SplitRule }
+export interface IncomeEventInput { kind: IncomeKind; amount_minor: number; received_on?: string; transaction_id?: string }
+export interface PlanNeedsIncome { month: string; needs_income: true }
+export interface AcceptedPlan { id: string; month: string; inputs: PlanInput; outputs: PlanOutput; accepted: true; accepted_at: string | null }
+export type BudgetSource = "plan" | "manual" | "none";
+export interface PlanAssumptions {
+  floor_pct: number; cap_pct: number; emergency_months: number;
+  goals: { id: string; name: string; return_bp: number; inflation_bp: number | null }[];
+}
+export interface PlanFull {
+  month: string; needs_income?: undefined;
+  plan: PlanOutput; inputs: PlanInput; accepted: AcceptedPlan | null;
+  lifestyle_budget: number | null; budget_source: BudgetSource;
+  assumptions: PlanAssumptions; references: PlanOutput["references"]; disclaimer: string;
+}
+export type PlanResponse = PlanNeedsIncome | PlanFull;
+export interface PlanSettingsResponse { overrides: Record<string, number>; lifestyle_floor_minor: number | null }
+
 /** Thrown by refreshNetworth when the 5-minute limit applies (HTTP 429). */
 export class RefreshLimitedError extends Error {
   constructor(public retryAfterS: number) { super("refreshed a moment ago"); }
@@ -295,4 +322,15 @@ export const api = {
   pledgeWant: (id: string, goalId: string) => req<{ ok: true; pledge_id: string }>(`/api/wants/${id}/pledge`, body("POST", { goal_id: goalId })),
   wantMatches: (id: string) => req<{ matches: WantMatch[] }>(`/api/wants/${id}/matches`),
   linkWant: (id: string, transactionId: string) => req<WantItem>(`/api/wants/${id}/link`, body("POST", { transaction_id: transactionId })),
+  // Income & plan (v2 P)
+  plan: (month?: string) => req<PlanResponse>(`/api/plan${month ? `?month=${month}` : ""}`),
+  acceptPlan: (b: { month?: string; extend?: boolean } = {}) => req<PlanResponse>("/api/plan/accept", body("POST", b)),
+  putPlanSettings: (s: { overrides?: Record<string, number> | null; lifestyle_floor_minor?: number | null }) => req<PlanSettingsResponse>("/api/plan/settings", body("PUT", s)),
+  income: () => req<IncomeResponse>("/api/income"),
+  putIncomeBase: (b: { base_takehome_minor: number; effective_from?: string }) => req<IncomeResponse>("/api/income/base", body("PUT", b)),
+  addIncomeEvent: (e: IncomeEventInput) => req<IncomeEvent>("/api/income/events", body("POST", e)),
+  confirmIncomeEvent: (id: string) => req<IncomeEvent>(`/api/income/events/${id}/confirm`, { method: "POST" }),
+  skipIncomeEvent: (id: string) => req<IncomeEvent>(`/api/income/events/${id}/skip`, { method: "POST" }),
+  deleteIncomeEvent: (id: string) => req<{ id: string; deleted: true }>(`/api/income/events/${id}`, { method: "DELETE" }),
+  putSplitRule: (r: SplitRule) => req<SplitRule>("/api/income/split-rule", body("PUT", r)),
 };

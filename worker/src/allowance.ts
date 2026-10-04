@@ -41,17 +41,25 @@ export function lifestyleSpend(rows: SummaryRow[], start: string, end: string): 
 }
 
 export interface LoadOptions {
-  /** One-off additions to a week's allowance, keyed by the week's start date. Feature P fills this later (no table yet). */
+  /** One-off additions to a week's allowance, keyed by the week's start date. Overrides the lifestyle_bonus table when given. */
   bonusForWeek?: (startDate: string) => number;
+}
+
+/** Σ lifestyle_bonus per week start date for weeks starting in [from, to] (feature P: the commission split's guilt-free share). */
+export async function loadBonusByWeek(db: D1Database, from: string, to: string): Promise<Map<string, number>> {
+  const rows = (await db.prepare("SELECT week_start, SUM(amount_sgd_minor) AS n FROM lifestyle_bonus WHERE week_start >= ?1 AND week_start <= ?2 GROUP BY week_start").bind(from, to).all<{ week_start: string; n: number }>()).results;
+  return new Map(rows.map((r) => [r.week_start, r.n]));
 }
 
 export async function loadWeekAllowance(db: D1Database, now: Date, opts: LoadOptions = {}): Promise<WeekAllowanceState> {
   const settings = await loadAllowanceSettings(db);
   const budgets = await loadBudgetRows(db);
   const budgetForMonth = (month: string) => lifestyleBudgetFor(budgets, month);
-  const bonusForWeek = opts.bonusForWeek ?? (() => 0);
   const week = sgtWeek(now, settings.weekStart);
   const chain = settings.carryEnabled ? carryChainStarts(week.startDate) : [];
+  // preload the bonuses of the current week and the carry chain, then hand weekAllowance a sync lookup
+  const bonuses = opts.bonusForWeek ? null : await loadBonusByWeek(db, chain[0] ?? week.startDate, week.startDate);
+  const bonusForWeek = opts.bonusForWeek ?? ((startDate: string) => bonuses?.get(startDate) ?? 0);
 
   const from = chain.length ? weekOf(chain[0]!).start : week.start;
   const rows = await loadRowsInRange(db, from, week.end);

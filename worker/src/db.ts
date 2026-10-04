@@ -1,4 +1,5 @@
 import { addMonths, monthRangeUtc, resolveBudgets, summarizeMonth, type BudgetRow, type MonthSummary, type SummaryRow, type Transaction } from "@okanary/core";
+import { ulid } from "./util";
 
 /** Columns every spend calculation needs: the txn plus its category's group and counts_as_spend. */
 export const TXN_WITH_GROUP_SQL = `
@@ -56,4 +57,11 @@ export async function loadBudgetRows(db: D1Database): Promise<BudgetRow[]> {
 
 export async function getTransaction(db: D1Database, id: string): Promise<Transaction | null> {
   return db.prepare(`SELECT * FROM transactions WHERE id = ?`).bind(id).first<Transaction>();
+}
+
+/** Insert or update the budget row for (scope, ref, effective_from month). Amount 0 clears the budget from that month on. */
+export async function upsertBudget(db: D1Database, scope: string, ref: string, month: string, amount: number): Promise<void> {
+  const existing = await db.prepare("SELECT id FROM budgets WHERE scope = ? AND ref_id = ? AND effective_from = ?").bind(scope, ref, month).first<{ id: string }>();
+  if (existing) await db.prepare("UPDATE budgets SET monthly_amount_sgd_minor = ? WHERE id = ?").bind(amount, existing.id).run();
+  else await db.prepare("INSERT INTO budgets (id, scope, ref_id, monthly_amount_sgd_minor, effective_from) VALUES (?,?,?,?,?)").bind(ulid(), scope, ref, amount, month).run();
 }

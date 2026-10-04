@@ -388,6 +388,11 @@ Built in the order A → U → N → G → W → S → P; mapping and conflicts 
 - One `subscriptions` table (Phase 5 `recurring` migrated in place). Ways in: detection (2 consecutive monthly charges ±15% → candidate + one push), manual add with a catalogue, Apple receipts (UNVERIFIED parser labels APPLE.COM/BILL charges), other receipts via AI → Review inbox, free trials (reminder 2 days before the end).
 - Monthly/yearly equivalents and totals (Essentials vs Lifestyle); annual renewals get a reminder 7 days before and a monthly set-aside in the plan; price-change alerts (> max(2%, S$0.50), +3% for foreign currency) with Accept / Review; missing charge flag (> 7 days late, no push); quarterly "Still using?" batched push; cost in goal terms ("Cancelling moves 'Japan trip' 3 weeks earlier"). Okanary records the intent to cancel and opens the service's page; it never cancels anything.
 
+### 13.P Income & personalised plan (built)
+- Base take-home (Settings/Plan) is the planning floor; commission and bonuses are logged when received and never raise the regular Lifestyle budget. Commission split (default 70% goals in priority order, behind first / 20% guilt-free added to this week's allowance / 10% buffer to the emergency fund) becomes pledges David confirms.
+- Plan engine: fixed (subscriptions + annual set-asides + Essentials baseline, overridable) + goals (Σ required, priority order) + Lifestyle (the rest, floor 60% / cap +10% of the usual, excess to goals). Infeasible → computed trade-offs (push back goal dates, lower Lifestyle with the weekly figure, commission coverage with ≥ 3 months of history). Percentages vs 50/30/20 and 60/20/20 as context only.
+- Accepting a plan sets the monthly Lifestyle budget (→ A's weekly allowance) and each goal's planned monthly; manual budgets show as "manual". Monthly check-in with plan vs actual on the 1st. Onboarding wizard on first open.
+
 ## Sources
 
 - [Apple Pay expense tracking with Shortcuts Wallet automation — CashJot](https://www.cashjot.com/blog/apple-pay-expense-tracking)
