@@ -1,7 +1,10 @@
+import { sgtDate, sgtParts } from "@okanary/core";
 import type { Deps } from "./deps";
 import type { Env } from "./env";
 import { sendWeeklyDigest } from "./digest";
 import { getSgdRate } from "./fx";
+import { hasSnapshot, runNetworthJob, symbolsMissingFreshQuote } from "./networth-job";
+import { sendMonthlySummary } from "./networth-summary";
 import { flushOutbox, sendNudge } from "./nudge-gate";
 import { runRecurringDetection } from "./recurring";
 import { tripCovering } from "./trips";
@@ -50,6 +53,24 @@ export async function refreshFx(env: Env, deps: Deps): Promise<string[]> {
 export const CRON_HOURLY = "0 * * * *";
 export const CRON_DAILY = "0 18 * * *"; // 02:00 SGT: recurring detection
 export const CRON_WEEKLY = "0 12 * * 0"; // Sunday 20:00 SGT: weekly digest
+export const CRON_NETWORTH = "30 22 * * *"; // 06:30 SGT (after the US close): net worth prices + daily snapshot
+
+/**
+ * Net worth retries from the hourly trigger (plan-v2 §2.3): 07:00-11:00 SGT re-run (only the symbols still lacking a fresh
+ * quote) while today's snapshot is missing or a held symbol has no fresh quote; at 12:00 SGT one last run with final: true keeps
+ * the last known price, marked stale.
+ */
+export async function networthHourly(env: Env, deps: Deps): Promise<"retry" | "final" | null> {
+  const now = deps.now();
+  const hour = sgtParts(now).hour;
+  if (hour < 7 || hour > 12) return null;
+  const today = sgtDate(now);
+  const incomplete = !(await hasSnapshot(env.DB, today)) || (await symbolsMissingFreshQuote(env.DB, today)).length > 0;
+  if (!incomplete) return null;
+  if (hour < 12) { await runNetworthJob(env, deps, { retry: true }); return "retry"; }
+  await runNetworthJob(env, deps, { final: true, retry: true });
+  return "final";
+}
 
 /** Cron entry: dispatches on the trigger's own expression. */
 export async function runScheduled(env: Env, deps: Deps, cron: string): Promise<void> {
@@ -57,10 +78,16 @@ export async function runScheduled(env: Env, deps: Deps, cron: string): Promise<
     await sendWeeklyDigest(env, deps);
   } else if (cron === CRON_DAILY) {
     await runRecurringDetection(env, deps);
+  } else if (cron === CRON_NETWORTH) {
+    await runNetworthJob(env, deps);
   } else {
     await promoteStalePending(env, deps);
     await emailHealthAlerts(env, deps);
     await refreshFx(env, deps);
     await flushOutbox(env, deps);
+    // Net worth steps are isolated: a failure here must not stop the jobs above or each other.
+    await networthHourly(env, deps).catch((e) => console.error("networth retry failed", (e as Error).message));
+    const sgt = sgtParts(deps.now());
+    if (sgt.day === 1 && sgt.hour === 9) await sendMonthlySummary(env, deps).catch((e) => console.error("monthly summary failed", (e as Error).message)); // 1st, 09:00 SGT
   }
 }

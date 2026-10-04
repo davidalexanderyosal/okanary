@@ -6,6 +6,7 @@ import { sgd } from "../lib/format";
 import { currentMonth } from "../lib/month";
 import { useRefData } from "../lib/refdata";
 import { groupColor } from "../components/groups";
+import { MoneyTabs } from "../components/MoneyTabs";
 import { PaceBar, paceText, paceTextColor } from "../components/PaceBar";
 import { useToast } from "../components/Toast";
 import { MonthStepper } from "./Transactions";
@@ -69,6 +70,7 @@ export function Budgets() {
 
   return (
     <div className="px-4 pb-6 pt-safe">
+      <MoneyTabs />
       <div className="pt-3"><MonthStepper month={month} onChange={setMonth} allowFuture /></div>
       <button className="tap mt-2 w-full rounded-xl border border-line text-sm font-medium"
         onClick={() => void api.copyBudgets(prev, month).then((r) => { invalidateAll(); toast({ msg: r.copied ? `Copied ${r.copied} budgets from last month` : "Nothing to copy from last month" }); })}>

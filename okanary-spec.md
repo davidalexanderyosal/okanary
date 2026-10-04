@@ -370,6 +370,11 @@ Built in the order A → U → N → G → W → S → P; mapping and conflicts 
 - Month: spend to day d vs the average of days 1..min(d, length) over the last 3 complete months with data ("based on N months"; none → "Not enough history yet"). Week: first k days vs the last 4 complete weeks. Total, Lifestyle and each category (categories in Reports only); excluded trips left out; under ±5% = "about usual".
 - Home: "S$640 so far · 12% below your usual by day 14" (amber only when above). Lifestyle card: "Week: about usual". Reports: per-category vs usual. Weekly digest: "Lifestyle this week S$210 · usual S$185". API `GET /api/usual`.
 
+### 13.N Net worth (built)
+- Assets: cash accounts (manual balance + as-of, any currency), US stocks/ETFs and crypto holdings (decimal-string quantities, optional cost basis), manual-value assets; liabilities: credit cards from the card-cycle data (since statement + last statement until paid) and optional manual loans.
+- Prices: Finnhub → Alpha Vantage fallback, CoinGecko (SGD, attribution shown), FX via Frankfurter/fx_rates. Daily job 06:30 SGT writes price_quotes and one networth_snapshots row (idempotent); retries hourly to 12:00 SGT, then keeps the last price marked stale. "Refresh now" ≤ 1 per 5 minutes.
+- Display: total, 1-month and YTD change split "You saved" vs "Market"; daily change one tap away on the Net worth screen only, never pushed. Home: "Net worth S$xx,xxx · +S$X this month". Monthly summary push on the 1st at 09:00 SGT. Balances older than 30 days get an "update?" chip.
+
 ## Sources
 
 - [Apple Pay expense tracking with Shortcuts Wallet automation — CashJot](https://www.cashjot.com/blog/apple-pay-expense-tracking)

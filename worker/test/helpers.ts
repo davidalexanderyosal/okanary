@@ -29,11 +29,17 @@ export const json = (method: string, body: unknown): RequestInit => ({ method, b
 export interface PushCall { url: string; headers: Record<string, string>; body: Uint8Array }
 
 /** An app + env wired with a fake network that records Web Push deliveries and answers Frankfurter lookups. */
-export function harness(opts: { vapid?: { pub: string; priv: string }; rates?: Record<string, number>; now?: Date } = {}) {
+export function harness(opts: {
+  vapid?: { pub: string; priv: string }; rates?: Record<string, number>; now?: Date;
+  /** Consulted first for every fetch; return a Response to answer it, or undefined to fall through to the built-in fakes. */
+  onFetch?: (url: string, init?: RequestInit) => Response | undefined | Promise<Response | undefined>;
+} = {}) {
   const pushes: PushCall[] = [];
   const fxCalls: string[] = [];
   const fetchFn = (async (url: RequestInfo | URL, init?: RequestInit) => {
     const u = String(url);
+    const custom = await opts.onFetch?.(u, init);
+    if (custom) return custom;
     if (u.includes("frankfurter")) {
       fxCalls.push(u);
       const base = /base=([A-Z]{3})/.exec(u)![1]!;
@@ -43,17 +49,20 @@ export function harness(opts: { vapid?: { pub: string; priv: string }; rates?: R
     pushes.push({ url: u, headers: (init?.headers ?? {}) as Record<string, string>, body: init?.body as Uint8Array });
     return new Response("{}", { status: 201 });
   }) as typeof fetch;
-  const now = opts.now ?? NOW;
+  let now = opts.now ?? NOW;
   const deps: Deps = { now: () => now, fetch: fetchFn };
   const e = { ...env, INGEST_TOKEN: "tok", ...(opts.vapid ? { VAPID_SUBJECT: "mailto:me@example.com", VAPID_PUBLIC_KEY: opts.vapid.pub, VAPID_PRIVATE_KEY: opts.vapid.priv } : {}) } as unknown as Env;
   const app = createApp(deps);
   const call = (path: string, init?: RequestInit) => Promise.resolve(app.request(path, init, e));
-  return { call, e, deps, pushes, fxCalls };
+  /** Move the clock (deps.now() of the app, cron and jobs all follow). */
+  const setNow = (d: Date) => { now = d; };
+  return { call, e, deps, pushes, fxCalls, setNow };
 }
 
 export const count = async (sql: string) => (await env.DB.prepare(sql).first<{ n: number }>())!.n;
 
 export async function resetDb() {
+  await env.DB.exec("DELETE FROM card_statement_paid; DELETE FROM holdings; DELETE FROM nw_balances; DELETE FROM nw_accounts; DELETE FROM price_quotes; DELETE FROM networth_snapshots;");
   await env.DB.exec(
     "DELETE FROM duplicate_candidates; DELETE FROM raw_ingest; DELETE FROM transactions; DELETE FROM merchant_rules; DELETE FROM accounts; DELETE FROM alert_log; DELETE FROM push_subscriptions; DELETE FROM fx_rates; DELETE FROM budgets; DELETE FROM trips; DELETE FROM push_outbox;",
   );

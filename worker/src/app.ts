@@ -7,6 +7,7 @@ import { budgets } from "./routes/budgets";
 import { ingest } from "./routes/ingest";
 import { insights } from "./routes/insights";
 import { meta } from "./routes/meta";
+import { networth } from "./routes/networth";
 import { review } from "./routes/review";
 import { setup } from "./routes/setup";
 import { transactions } from "./routes/transactions";
@@ -28,6 +29,7 @@ export function createApp(overrides: Partial<Deps> = {}) {
   app.route("/api", insights);
   app.route("/api", allowance);
   app.route("/api", usual);
+  app.route("/api", networth);
   app.route("/api", setup);
   app.route("/api/transactions", transactions);
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));

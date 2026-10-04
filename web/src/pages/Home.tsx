@@ -11,6 +11,7 @@ import { groupColor } from "../components/groups";
 import { Icon } from "../components/Icons";
 import { Mascot } from "../components/Mascot";
 import { ReceiptPaceBar, paceText, paceTextColor } from "../components/PaceBar";
+import { homeNetWorthLine } from "../lib/networth";
 import { monthLine, safeNote, weekHeadline } from "../lib/allowance";
 import { monthUsualLine, usualToneClass, weekUsualText } from "../lib/usual";
 import { TxnRow } from "../components/TxnRow";
@@ -21,6 +22,7 @@ export function Home() {
   const summary = useResource(`summary:${month}`, () => api.summary(month));
   const allowance = useResource("allowance", api.allowance);
   const usual = useResource("usual", api.usual);
+  const networth = useResource("networth", api.networth);
   const recent = useResource("recent", () => api.transactions({ limit: 5 }));
   const [editing, setEditing] = useState<TxnRowData | null>(null);
   const s = summary.data;
@@ -44,6 +46,8 @@ export function Home() {
   const monthUsual = u ? monthUsualLine(u.month.total, u.month.day, u.month.periods.length) : null;
   const weekUsual = u ? weekUsualText(u.week.lifestyle) : null;
   const weekUsualEl = weekUsual && <p className={`num mt-1 text-xs ${usualToneClass[weekUsual.tone]}`}>{weekUsual.text}</p>;
+  const nw = networth.data;
+  const nwLine = nw?.latest && (nw.accounts.length > 0 || nw.latest.net !== 0) ? homeNetWorthLine(nw.latest.net, nw.change.month?.change) : null;
   const lifestyleShare = s && s.total > 0 ? Math.round((g.lifestyle * 100) / s.total) : 0;
 
   return (
@@ -126,6 +130,12 @@ export function Home() {
         ))}
         {g.uncategorised > 0 && <p className="pt-1 text-xs text-muted">Plus <span className="num">{sgd(g.uncategorised)}</span> uncategorised</p>}
       </section>
+
+      {nwLine && (
+        <Link to="/money/networth" className="tap num mt-3 flex items-center justify-between rounded-full bg-card px-4 text-[13px] shadow-sm active:bg-line/40" aria-label="Net worth">
+          <span>{nwLine}</span><span aria-hidden className="text-accent">›</span>
+        </Link>
+      )}
 
       <section className="mb-6 mt-4" aria-label="Recent">
         <h2 className="px-1 pb-1.5 text-[13px] font-bold text-muted">Latest</h2>

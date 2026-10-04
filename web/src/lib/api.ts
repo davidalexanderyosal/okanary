@@ -1,4 +1,4 @@
-import type { Account, BudgetRow, Category, CategoryGroup, MonthSummary, Transaction, UsualResult, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
+import type { Account, Breakdown, BudgetRow, CardLiability, NwKind, Category, CategoryGroup, MonthSummary, Transaction, UsualResult, WeekAllowance, WeekSafeToSpend } from "@okanary/core";
 
 export type TxnRowData = Transaction & { group_id: string | null; group_counts_as_spend: number | null };
 export type Summary = MonthSummary & { reviewCount: number; budgets: BudgetRow[] };
@@ -71,6 +71,38 @@ export interface SettingsInput {
   nudge_daily_limit?: number; quiet_start?: string; quiet_end?: string;
 }
 
+// ---- Net worth (v2 N) ----
+export type { NwKind };
+export interface NwAccountRow { id: string; name: string; kind: NwKind; institution: string | null; currency: string; include_in_networth: number; archived: number }
+export interface NwBalanceRow { id: string; account_id: string; amount_minor: number; currency: string; as_of: string; note: string | null; flow_minor: number | null }
+export interface NwAccountView extends NwAccountRow { balance: NwBalanceRow | null; value_sgd: number | null; age_days: number | null; needs_update: boolean }
+export interface NwHoldingRow { id: string; account_id: string; asset_type: "us_equity" | "crypto"; symbol: string; quantity: string; cost_basis_minor: number | null; cost_currency: string | null; acquired_at: string | null }
+export interface NwHoldingView extends NwHoldingRow {
+  price_minor: number | null; price_currency: string | null; value_sgd: number | null; gain_sgd: number | null; day_move_sgd: number | null; stale: boolean; quote_date: string | null;
+}
+export interface NwChange { from: string; to: string; change: number; flows: number; market: number; partial: boolean }
+export interface NwHeadline { date: string; net: number; assets: number; liabilities: number; classes: Breakdown["classes"]; flows: number; market: number }
+export interface NetworthResponse {
+  today: string;
+  latest: NwHeadline | null;
+  change: { month: NwChange | null; ytd: NwChange | null; day: { date: string; flows: number; market: number; change: number } | null };
+  accounts: NwAccountView[];
+  holdings: NwHoldingView[];
+  cards: (CardLiability & { last_statement: string | null; previous_bill: number; previous_paid: boolean })[];
+  last_refresh_at: string | null;
+  live: boolean;
+  attribution: string;
+}
+export interface NwRefreshResult { date: string; net: number; flows: number; market: number; fetched: number; failed: string[]; stale: string[] }
+export interface NwAccountInput { name: string; kind: NwKind; institution?: string | null; currency?: string; include_in_networth?: boolean; archived?: boolean }
+export interface NwBalanceInput { amount_minor: number; currency?: string; as_of?: string; note?: string | null; flow_minor?: number | null }
+export interface NwHoldingInput { account_id: string; asset_type: "us_equity" | "crypto"; symbol: string; quantity: string; cost_basis_minor?: number | null; cost_currency?: string | null; acquired_at?: string | null }
+
+/** Thrown by refreshNetworth when the 5-minute limit applies (HTTP 429). */
+export class RefreshLimitedError extends Error {
+  constructor(public retryAfterS: number) { super("refreshed a moment ago"); }
+}
+
 export const api = {
   summary: (month: string) => req<Summary>(`/api/summary?month=${month}`),
   categories: () => req<CategoriesResponse>("/api/categories"),
@@ -122,4 +154,25 @@ export const api = {
   pushSubscribe: (sub: unknown) => req<{ ok: true }>("/api/push/subscribe", body("POST", sub)),
   pushUnsubscribe: (endpoint: string) => req<{ ok: true }>("/api/push/unsubscribe", body("POST", { endpoint })),
   pushTest: () => req<{ delivered: number; configured: boolean }>("/api/push/test", { method: "POST" }),
+
+  networth: () => req<NetworthResponse>("/api/networth"),
+  networthHistory: (days: number) => req<NwHeadline[]>(`/api/networth/history?days=${days}`),
+  refreshNetworth: async (): Promise<NwRefreshResult> => {
+    const res = await fetch("/api/networth/refresh", { method: "POST", headers: { "content-type": "application/json" } });
+    if (res.status === 429) {
+      const j = await res.json().catch(() => null) as { retry_after_s?: number } | null;
+      throw new RefreshLimitedError(j?.retry_after_s ?? 300);
+    }
+    if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+    return res.json() as Promise<NwRefreshResult>;
+  },
+  createNwAccount: (a: NwAccountInput) => req<NwAccountRow>("/api/nw/accounts", body("POST", a)),
+  patchNwAccount: (id: string, a: Partial<NwAccountInput>) => req<NwAccountRow>(`/api/nw/accounts/${id}`, body("PATCH", a)),
+  addNwBalance: (accountId: string, b: NwBalanceInput) => req<NwBalanceRow>(`/api/nw/accounts/${accountId}/balances`, body("POST", b)),
+  deleteNwBalance: (id: string) => req<{ ok: true }>(`/api/nw/balances/${id}`, { method: "DELETE" }),
+  createNwHolding: (h: NwHoldingInput) => req<NwHoldingRow>("/api/nw/holdings", body("POST", h)),
+  patchNwHolding: (id: string, h: Partial<NwHoldingInput>) => req<NwHoldingRow>(`/api/nw/holdings/${id}`, body("PATCH", h)),
+  deleteNwHolding: (id: string) => req<{ ok: true }>(`/api/nw/holdings/${id}`, { method: "DELETE" }),
+  markStatementPaid: (accountId: string, statementDate: string) => req<{ account_id: string; statement_date: string; paid_at: string }>(`/api/cards/${accountId}/statement-paid`, body("POST", { statement_date: statementDate })),
+  unmarkStatementPaid: (accountId: string, statementDate: string) => req<{ ok: true }>(`/api/cards/${accountId}/statement-paid`, body("DELETE", { statement_date: statementDate })),
 };
