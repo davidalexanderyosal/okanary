@@ -21,7 +21,7 @@
   ],
   // Workers AI: category suggestions + email-parse fallback. Always remote; local dev uses wrangler.dev.jsonc (no AI binding).
   "ai": { "binding": "AI" },
-  // Hourly: promote stale pending Apple Pay items, email-silence alerts, FX refresh. Daily 02:00 SGT: recurring detection. Sunday 20:00 SGT: weekly digest.
-  "triggers": { "crons": ["0 * * * *", "0 18 * * *", "0 12 * * 0"] },
+  // Hourly: promote stale pending Apple Pay items, email-silence alerts, FX refresh, push outbox flush, net worth price retries (07:00-12:00 SGT), monthly summary (1st, 09:00 SGT). 06:30 SGT: net worth prices + daily snapshot. Daily 02:00 SGT: recurring detection. Sunday 20:00 SGT: weekly digest.
+  "triggers": { "crons": ["0 * * * *", "0 18 * * *", "0 12 * * 0", "30 22 * * *"] },
   "observability": { "enabled": true }
 }

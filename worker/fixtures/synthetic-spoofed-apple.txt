@@ -1,0 +1,13 @@
+Authentication-Results: mx.cloudflare.net; dkim=fail header.d=email.apple.com; spf=fail
+From: Apple <no_reply@email.apple.com>
+To: owner@example.com
+Subject: Your receipt from Apple.
+Date: Mon, 05 Oct 2026 09:30:00 +0800
+Message-ID: <synthetic-spoofed-apple-1@email.apple.com>
+Content-Type: text/plain; charset=utf-8
+
+Date: 5 Oct 2026
+iCloud+ with 200 GB storage
+Monthly (Renews 5 Nov 2026)    S$3.98
+Total    S$3.98
+SYNTHETIC FIXTURE: forged sender (DKIM fails), must NOT be parsed.

@@ -54,3 +54,19 @@ export function htmlToText(html: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+/** 'YYYY-MM-DD' from day / month name / year, or null when it isn't a real calendar date. */
+export function ymd(day: number, monthName: string, year: number): string | null {
+  const m = monthNum(monthName);
+  if (!m || year < 2000 || year > 2100 || day < 1 || day > 31) return null;
+  if (new Date(Date.UTC(year, m - 1, day)).getUTCDate() !== day) return null;
+  return `${year}-${p2(m)}-${p2(day)}`;
+}
+
+/** Billing cycle implied by the gap between a receipt date and its renewal date ('YYYY-MM-DD'); null when it is neither ~1 month nor ~1 year. */
+export function cycleFromRenewal(date: string, renews: string): "monthly" | "yearly" | null {
+  const days = (Date.parse(renews) - Date.parse(date)) / 86400_000;
+  if (days >= 25 && days <= 35) return "monthly";
+  if (days >= 355 && days <= 375) return "yearly";
+  return null;
+}

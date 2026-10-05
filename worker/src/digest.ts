@@ -1,9 +1,10 @@
-import { expectedByDay, isSpend, monthProgress, prettyMerchant, sgtDate, sgtMonth, sgtWeekRangeUtc, signedSgdMinor, summarizeMonth, weeklyDigestBody } from "@okanary/core";
+import { expectedByDay, isSpend, monthProgress, prettyMerchant, sgtDate, sgtMonth, sgtWeekRangeUtc, signedSgdMinor, summarizeMonth, weekUsualLine, weekVsUsual, weeklyDigestBody } from "@okanary/core";
 import { lifestyleBudget } from "./capture";
 import { loadSummaryRows } from "./db";
 import type { Deps } from "./deps";
 import type { Env } from "./env";
-import { sendPushToAll } from "./push";
+import { sendNudge } from "./nudge-gate";
+import { loadUsualRows, usualFor } from "./usual";
 import { getSetting } from "./settings";
 import { nowIso, ulid } from "./util";
 
@@ -23,10 +24,13 @@ export async function sendWeeklyDigest(env: Env, deps: Deps): Promise<{ sent: bo
   const s = summarizeMonth(rows, month, now);
   const prog = monthProgress(now);
   const budget = await lifestyleBudget(env.DB, month);
-  const body = weeklyDigestBody({
+  const base = weeklyDigestBody({
     weekTotalSgd: weekTotal, lifestyleSpentSgd: s.byGroup.find((g) => g.id === "lifestyle")?.spent ?? 0,
     lifestyleBudgetSgd: budget, lifestyleExpectedSgd: budget ? expectedByDay(budget, prog.day, prog.daysInMonth) : null, top,
   });
-  await sendPushToAll(env, deps, { title: "Okanary: your week", body, url: "/reports", tag: "weekly-digest" });
+  // Same Monday-start week as the digest's own "This week" total (the digest is the Sunday-evening wrap-up).
+  const lifestyleWeek = usualFor(weekVsUsual(await loadUsualRows(env.DB, now), now, 1), "group:lifestyle");
+  const body = `${base} · ${weekUsualLine(lifestyleWeek.current, lifestyleWeek.usual)}`;
+  await sendNudge(env, deps, { title: "Okanary: your week", body, url: "/reports", tag: "weekly-digest" }, "weekly_digest");
   return { sent: true, body };
 }

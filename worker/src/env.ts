@@ -15,5 +15,12 @@ export interface Env {
   FORWARD_TO?: string;
   /** Extra sender domains, e.g. "mail.dbs.com:dbs,example.com:citi". */
   ALERT_SENDER_DOMAINS?: string;
+  /** Net worth prices (v2 N). Worker secrets (`wrangler secret put ...`); a missing key just skips that source. */
+  /** Finnhub /quote: primary source for US stock / ETF prices. */
+  FINNHUB_API_KEY?: string;
+  /** Alpha Vantage GLOBAL_QUOTE: fallback used only for tickers Finnhub fails on (25 calls/day on the free tier). */
+  ALPHAVANTAGE_API_KEY?: string;
+  /** CoinGecko Demo key (x-cg-demo-api-key header) for crypto prices in SGD. Attribution is shown on the net worth screen. */
+  COINGECKO_API_KEY?: string;
 }
 export type AppEnv = { Bindings: Env; Variables: { deps: Deps } };

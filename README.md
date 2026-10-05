@@ -34,7 +34,8 @@ npx wrangler login
 # 1. D1 database. Copy the printed database_id into wrangler.jsonc ("d1_databases"[0].database_id)
 npx wrangler d1 create okanary
 
-# 2. Apply all migrations (0001 schema+seed, 0002 duplicate cards, 0003 trips.currency + alert uniqueness) to the REMOTE db
+# 2. Apply all migrations to the REMOTE db (0001 schema+seed, 0002 duplicate cards, 0003 trips.currency + alert uniqueness;
+#    v2: 0004 push outbox, 0005 net worth, 0006 goals, 0007 wants, 0008 recurring -> subscriptions, 0009 income & plan)
 npm run db:migrate:remote
 
 # 3. Secrets. Web Push (VAPID) keys: run `npm run vapid`, then paste each value when prompted
@@ -43,6 +44,10 @@ npx wrangler secret put VAPID_PUBLIC_KEY
 npx wrangler secret put VAPID_PRIVATE_KEY
 npx wrangler secret put VAPID_SUBJECT          # e.g. mailto:you@example.com
 npx wrangler secret put FORWARD_TO             # your Gmail (a verified Email Routing destination, see below)
+# v2 net worth prices (free keys; a missing key just skips that source):
+npx wrangler secret put FINNHUB_API_KEY        # finnhub.io
+npx wrangler secret put ALPHAVANTAGE_API_KEY   # alphavantage.co (fallback for US tickers)
+npx wrangler secret put COINGECKO_API_KEY      # coingecko.com, Demo plan
 # INGEST_TOKEN is optional: the Setup page can generate/rotate the Shortcut token for you. To bootstrap one yourself:
 # npx wrangler secret put INGEST_TOKEN
 

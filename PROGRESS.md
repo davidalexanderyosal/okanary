@@ -71,3 +71,85 @@ Totals at the end: 124 core + 100 worker + 10 web unit/integration tests passing
 - PDF statements must be pasted as text (no in-app PDF parsing).
 - No Playwright/iPhone end-to-end suite; the UI was checked with headless Chromium at 390×844 only.
 - A foreign purchase recorded in SGD and billed >6% away still imports as a new line (shows up in the preview before you apply).
+
+---
+
+# v2 (docs/feature-brief-v2.md): A → U → N → G → W → S → P
+
+Branch: `claude/cool-goldberg-e9ec40`. Plan: `docs/plan-v2.md`. Nothing deployed.
+
+| Feature | Status |
+|---|---|
+| Plan (step 1) | DONE |
+| A — Weekly Lifestyle allowance | DONE |
+| U — "Vs your usual" | DONE |
+| N — Net worth | DONE |
+| G — Goals | DONE |
+| W — Want list | DONE |
+| S — Subscriptions hub | DONE |
+| P — Income & plan | DONE |
+
+## A — Weekly Lifestyle allowance: DONE
+- Core: `allowance.ts` (proration per month with exact month sums D-47, override, carry chain D-48, week safe-to-spend), configurable weeks in `dates.ts` (`sgtWeek`, `isoWeekLabel`), `nudge-gate.ts` (limit + quiet hours), push text "— S$96 left this week".
+- Worker: `GET /api/allowance`, settings (`week_start`, `allowance_override_minor`, `allowance_carry`, `nudge_daily_limit`, `quiet_start`, `quiet_end`), weekly 80/100% alerts (`alert_log` period `YYYY-Www`), nudge gate + `push_outbox` (migration 0004) flushed hourly; budget alerts/digest/email-health now go through the gate (D-49).
+- Web: Home Lifestyle card leads with the week (D-51); Settings → Weekly allowance + Notification limit.
+- Tests: core `allowance.test.ts` (proration 31/30/28 days, month and year crossings, Sunday 23:59 SGT, sum check, override, carry on/off, safe-to-spend, push text, gate); worker `allowance.test.ts` (API, settings, weekly alert dedupe, gate limit/quiet/flush/coalesce/expiry, post-purchase exempt); web `allowance.test.ts`.
+
+## U — "Vs your usual": DONE
+- Core `baseline.ts`: `monthVsUsual` (last 3 complete months with data, days 1..min(d, len)), `weekVsUsual` (last 4 complete weeks, first k days), `compareToUsual` (±5% band), `categoriesVsUsual`, `weekUsualLine`, `monthlyAverage` (used by G/P) (D-52).
+- Worker `GET /api/usual` (month: total, Lifestyle, categories; week: total, Lifestyle); weekly digest gains "Lifestyle this week S$210 · usual S$185".
+- Web: Home line under the month total (neutral, amber when above), Lifestyle card "Week: about usual", Reports "Vs your usual" per-category card (current month).
+- Tests: core `baseline.test.ts` (0/1/2/3+ months, day 31 vs shorter months, trip exclusion, ±5% band, week baseline), worker `usual.test.ts`, web `usual.test.ts`, digest line in `phase5.test.ts`.
+
+## N — Net worth: DONE
+- Migration 0005 (nw_accounts, nw_balances + flow_minor, holdings, price_quotes, networth_snapshots, card_statement_paid).
+- Core: `decimal.ts` (BigInt decimal strings, quantity × price), `networth.ts` (valuation, card liability, snapshot breakdown, flows vs market D-54, ranges, stale quotes).
+- Worker: `prices.ts` (Finnhub → Alpha Vantage fallback, CoinGecko demo key), `networth-job.ts` (06:30 SGT cron + hourly retries to 12:00 then stale carry-forward, idempotent per day), `/api/networth`, `/history`, `/refresh` (≤1 per 5 min), CRUD for accounts/balances/holdings, card statement paid; monthly summary push (1st, 09:00 SGT) with saved vs market.
+- Web: Money hub (Net worth / Goals / Plan / Budgets, D-57), Net worth tab (total, 1-month/YTD saved vs market, daily one tap away, stacked area chart, accounts with "update?" chip, cards, holdings, sheets, Refresh now, "Crypto prices by CoinGecko"); Home line "Net worth S$xx,xxx · +S$X this month".
+- Tests: core `networth.test.ts` (decimal × price, FX, flows vs market worked example, card liability, stale), worker `networth.test.ts` (mocked Finnhub/Alpha Vantage/CoinGecko/Frankfurter: idempotency, fallback, stale, cards, cron dispatch, summary, API), web `networth.test.ts`.
+
+## G — Goals: DONE
+- Migration 0006 (goals incl. planned_monthly_minor, goal_funding, goal_snapshots, goal_contributions; one underspend receiver, one underspend pledge per week). No earlier goals table existed, so nothing to migrate (tested).
+- Core `goals.ts`: targets (inflation, 4% rule, emergency = 6 × Essentials), PMT required, projection, completion date, status (D-58), range ±2 pp, funding value (D-59) and warnings, pace excluding market (D-60), horizon + "safer funding" prompt, underspend amount/receiver (D-61), waterfall, Home summary line.
+- Worker: `/api/goals*` (CRUD, reorder, underspend receiver, funding links, contributions transfer/skip, emergency suggestion), daily goal snapshots + horizon refresh + one-time safer-funding nudge from the net worth job, Monday 00:00 SGT underspend pledges (idempotent) with Transferred/Skip push actions, goals line in the monthly summary.
+- Web: Goals tab (Short/Mid/Long cards, pledges, warnings, reorder, emergency suggestion), editor, detail with projection chart (+cone for long goals), assumptions + "Estimates, not financial advice.", Home line, service-worker actions.
+- Tests: core `goals.test.ts`, worker `goals.test.ts`, web `goals.test.ts`.
+
+## W — Want list: DONE
+- Migration 0007 (`wants` + `bought_early`). Core `wants.ts` (default wait, decide_after in SGT, transitions incl. early-buy confirmation, batched ready push text, skipped total, transaction match ±10%/14 days, countdown) (D-62).
+- Worker: `/api/wants*` (add with FX, buy/skip/pledge/link/matches), hourly ready job with one batched push via the nudge gate, wait threshold setting.
+- Web: Want list (Waiting / Ready / Decided, countdowns, quick add), "Want, not buy" in Quick add and on Home, "Not bought this year" on Home and Reports.
+- Tests: core `wants.test.ts`, worker `wants.test.ts`, web `wants.test.ts`.
+
+## S — Subscriptions hub: DONE
+- Migration 0008: `recurring` renamed in place to the one `subscriptions` table (+ `subscription_events`), data backfilled, FK follows (D-63). Detection needs 2 consecutive monthly charges (D-64).
+- Core `subscriptions.ts`: monthly/yearly equivalents, totals (Essentials vs Lifestyle), plan fixed costs + annual set-aside (D-65), price-change threshold incl. FX tolerance, missing charge, trial/renewal reminder timing, quarter, matching (pattern, candidate merge, Apple receipt), goal impact, catalogue.
+- Worker: `/api/subscriptions*` (manual add from catalogue with merge, confirm/dismiss, accept/review price, cancel intent, keep, remind later), charge hook on capture/manual/statement import (link, last charged, next renewal, price-change nudge), daily trial/renewal/missing/quarterly usage jobs (D-66), Apple receipt parser (UNVERIFIED) + daily re-match, AI receipt fallback to the Review inbox (D-67), `loadSubscriptionFixedCosts` for P.
+- Web: Subscriptions hub (totals, to-confirm, needs-a-look flags, cost in goal terms, add/edit from catalogue incl. trials, cancel intent opens the service page, "Still using?" check), links from Budgets and Reports.
+- Tests: core `subscriptions.test.ts` (+ updated detection in `phase5.test.ts`), worker `subscriptions.test.ts`, `receipts.test.ts`, `parsers.test.ts`, web `subscriptions.test.ts`.
+
+## P — Income & personalised plan: DONE
+- Migration 0009 (income_settings, income_events, plans, lifestyle_bonus).
+- Core `plan.ts`: `buildPlan` (fixed costs with overrides, goals waterfall, floor/cap, overflow, computed trade-offs, largest-remainder percentages, reference splits) (D-68, D-69), `commissionSplit` (D-70), `planVsActual`.
+- Worker: `/api/income*` (base take-home, commission/bonus events with proposed split → confirm creates pledges + a guilt-free `lifestyle_bonus` on this week's allowance), `/api/plan*` (inputs from S fixed costs, U-style baselines, G goals; accept writes the Lifestyle budget → A's allowance and goals' planned monthly; settings), monthly check-in lines in the 1st-of-month summary.
+- Web: Plan tab (income card, commission splits to confirm, split bar, fixed lines with overrides, per-goal contributions, trade-off cards, assumptions + "Estimates, not financial advice."), onboarding wizard, Home plan line, Settings income row.
+- Tests: core `plan.test.ts`, worker `plan.test.ts`, web `plan.test.ts`.
+
+## Needs David (v2)
+- **After deploying P:** open Money → Plan and run the onboarding wizard (base take-home after CPF, confirm subscriptions and fixed costs, goals incl. the suggested emergency fund, accept the plan).
+- **Apple receipt sample (before relying on S's Apple labelling):** forward one Apple subscription receipt to yourself, redact it, save it as `worker/fixtures/apple-receipt-1.txt` (and add Google Play / Netflix / Spotify receipts if you get them); the Apple parser is UNVERIFIED until checked against it.
+- Gmail: extend the forwarding filter to send Apple receipts (`no_reply@email.apple.com`) and service receipts (Netflix, Spotify, …) to `spend@<domain>`.
+- **Price API keys (before deploying N):** create free keys at Finnhub (finnhub.io), Alpha Vantage (alphavantage.co) and CoinGecko (Demo plan), then `npx wrangler secret put FINNHUB_API_KEY`, `ALPHAVANTAGE_API_KEY`, `COINGECKO_API_KEY`. Without a key that source is skipped (stocks fall back to Alpha Vantage; crypto has no fallback).
+- Apply migrations 0004+ remotely (`npm run db:migrate:remote`) and deploy; the new 06:30 SGT cron is in `wrangler.jsonc`.
+- Enter net-worth accounts, balances and holdings (Money → Net worth).
+- Nothing new for A. Optional: Settings → Weekly allowance (week start, fixed amount, carry-over) and Notification limit.
+
+## v2 status summary
+All seven features (A, U, N, G, W, S, P) are implemented, tested locally and committed one per feature on `claude/cool-goldberg-e9ec40`. Nothing was deployed and no remote Cloudflare resource or external API was called (all price/FX/AI calls are mocked in tests).
+Totals: 225 core + 265 worker + 140 web tests passing; web and worker builds exit 0; migrations 0004–0009 apply to the local D1.
+
+### Known limitations (v2)
+- The new screens (Net worth, Goals, Plan + wizard, Want list, Subscriptions hub, Home lines) were type-checked, unit-tested and built but not opened in a browser or on the iPhone.
+- The Apple receipt parser is UNVERIFIED (synthetic fixtures only); generic receipts depend on Workers AI (remote-only, faked in tests).
+- Push actions (Transferred / Skip on pledge notifications) call the API from the service worker with the Access cookie; check on the phone that Cloudflare Access lets those requests through.
+- Price APIs were never called for real: verify the Finnhub / Alpha Vantage / CoinGecko responses once the keys exist ("Refresh now" on the Net worth tab).

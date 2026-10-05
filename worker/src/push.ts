@@ -2,7 +2,11 @@ import { buildPushPayload } from "@block65/webcrypto-web-push";
 import type { Deps } from "./deps";
 import type { Env } from "./env";
 
-export interface PushPayload { title: string; body: string; url?: string; tag?: string }
+/**
+ * `pledge` / `actions` are optional and carried in the push data as-is (the whole payload is the data): a goal pledge id and a
+ * comma-separated list of action ids ("transfer,skip") the service worker can offer as notification buttons.
+ */
+export interface PushPayload { title: string; body: string; url?: string; tag?: string; pledge?: string; actions?: string }
 
 export const pushConfigured = (env: Env) => !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT);
 

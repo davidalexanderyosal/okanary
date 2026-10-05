@@ -1,0 +1,17 @@
+Return-Path: <info@mail.netflix.com>
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=mail.netflix.com header.s=sel1; spf=pass smtp.mailfrom=mail.netflix.com; dmarc=pass
+From: Netflix <info@mail.netflix.com>
+To: owner@example.com
+Subject: Your Netflix payment receipt
+Date: Mon, 05 Oct 2026 08:00:00 +0800
+Message-ID: <synthetic-netflix-receipt-1@mail.netflix.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Thanks for being a member.
+We charged your card for your Netflix Standard plan.
+
+Billing date: 5 Oct 2026
+Amount: S$19.98
+Next billing date: 5 Nov 2026
+SYNTHETIC FIXTURE: invented for tests, not a real Netflix email.

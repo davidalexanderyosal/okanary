@@ -11,12 +11,23 @@ import { groupColor } from "../components/groups";
 import { Icon } from "../components/Icons";
 import { Mascot } from "../components/Mascot";
 import { ReceiptPaceBar, paceText, paceTextColor } from "../components/PaceBar";
+import { homeNetWorthLine } from "../lib/networth";
+import { monthLine, safeNote, weekHeadline } from "../lib/allowance";
+import { monthUsualLine, usualToneClass, weekUsualText } from "../lib/usual";
 import { TxnRow } from "../components/TxnRow";
+import { homePlanLine } from "../lib/plan";
+import { notBoughtText, wantsAddLink } from "../lib/wants";
 
 export function Home() {
   const month = currentMonth();
   const ref = useRefData();
   const summary = useResource(`summary:${month}`, () => api.summary(month));
+  const allowance = useResource("allowance", api.allowance);
+  const usual = useResource("usual", api.usual);
+  const networth = useResource("networth", api.networth);
+  const goals = useResource("goals", api.goals);
+  const plan = useResource(`plan:${month}`, () => api.plan(month));
+  const wantStats = useResource("wantStats", api.wantStats);
   const recent = useResource("recent", () => api.transactions({ limit: 5 }));
   const [editing, setEditing] = useState<TxnRowData | null>(null);
   const s = summary.data;
@@ -33,6 +44,18 @@ export function Home() {
   const lifeBudget = s?.budgets.find((b) => b.scope === "group" && b.ref_id === "lifestyle")?.monthly_amount_sgd_minor ?? 0;
   const pace = s && lifeBudget > 0 ? paceFor(g.lifestyle, lifeBudget, s.day, s.daysInMonth) : null;
   const safe = s && lifeBudget > 0 ? safeToSpendToday(lifeBudget, g.lifestyle, s.daysInMonth - s.day + 1) : null;
+  // Weekly basis (v2 A): leads the Lifestyle card whenever there is a weekly allowance (monthly budget or fixed override).
+  const al = allowance.data?.allowance.hasAllowance ? allowance.data : null;
+  const weekPace = al ? paceFor(al.spent, al.allowance.total, al.week.day, 7) : null;
+  const u = usual.data;
+  const monthUsual = u ? monthUsualLine(u.month.total, u.month.day, u.month.periods.length) : null;
+  const weekUsual = u ? weekUsualText(u.week.lifestyle) : null;
+  const weekUsualEl = weekUsual && <p className={`num mt-1 text-xs ${usualToneClass[weekUsual.tone]}`}>{weekUsual.text}</p>;
+  const nw = networth.data;
+  const nwLine = nw?.latest && (nw.accounts.length > 0 || nw.latest.net !== 0) ? homeNetWorthLine(nw.latest.net, nw.change.month?.change) : null;
+  const goalsLine = goals.data && goals.data.goals.length > 0 ? goals.data.summary : null;
+  const planLine = homePlanLine(plan.data);
+  const notBought = notBoughtText(wantStats.data);
   const lifestyleShare = s && s.total > 0 ? Math.round((g.lifestyle * 100) / s.total) : 0;
 
   return (
@@ -43,10 +66,11 @@ export function Home() {
           <h1 className="mt-2.5 text-[13px] font-bold text-muted">Spent this month</h1>
           <p className="big-num text-[44px] leading-[1.05]" style={{ textShadow: "0 2px 0 var(--card)" }}>{s ? sgd(s.total) : "…"}</p>
           {s && s.totalLastMonthToDate > 0 && (
-            <p className={`num mt-1 text-xs ${delta > 0 ? "text-danger" : "text-good"}`}>
+            <p className={`num mt-1 text-xs ${delta > 0 ? "text-lifestyle-ink" : "text-good"}`}>
               {delta === 0 ? "Same as" : `${sgd(Math.abs(delta))} ${delta > 0 ? "more" : "less"} than`} this day last month
             </p>
           )}
+          {monthUsual && <p className={`num mt-1 text-xs ${usualToneClass[monthUsual.tone]}`}>{monthUsual.text}</p>}
         </div>
         <div className="flex shrink-0 flex-col items-end">
           <Link to="/settings" aria-label="Settings" className="tap -mr-2 -mt-2 grid place-items-center text-muted active:text-fg"><Icon name="gear" className="h-[22px] w-[22px]" /></Link>
@@ -64,25 +88,44 @@ export function Home() {
         <span aria-hidden lang="ja" className="absolute right-4 top-[44px] grid h-10 w-10 -rotate-12 place-items-center rounded-full border-2 border-stamp text-xs font-extrabold leading-none text-stamp opacity-90">お金</span>
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-sm font-extrabold text-accent">Lifestyle</h2>
-          {pace
+          {weekPace
+            ? <span className={`rounded-full bg-pill px-2.5 py-0.5 text-[11px] font-extrabold ${weekPace.state === "exceeded" ? "text-lifestyle-ink" : paceTextColor[weekPace.state]}`}>{weekPace.state === "exceeded" ? "Over this week" : paceText[weekPace.state]}</span>
+            : pace
             ? <span className={`rounded-full bg-pill px-2.5 py-0.5 text-[11px] font-extrabold ${paceTextColor[pace.state]}`}>{paceText[pace.state]}</span>
             : <span className="text-xs text-muted">{lifestyleShare}% of spend</span>}
         </div>
-        <p className="num mt-1.5 pr-12 text-[30px] leading-[1.1] tracking-tight">
-          {sgd(g.lifestyle)}
-          {pace && <span className="text-[15px] text-muted"> / {sgd(lifeBudget)}</span>}
-        </p>
-        {pace && safe ? (
+        {al && weekPace ? (
           <>
-            <ReceiptPaceBar pace={pace} />
-            <p className={`mt-4 rounded-full border-[1.5px] px-3 py-2 text-[13px] font-bold ${safe.exceeded ? "border-danger/50 bg-danger/10 text-danger" : "border-mint-line bg-mint-bg"}`}>
-              {safe.exceeded
-                ? <>Over budget by <span className="num text-base">{sgd(-safe.remaining)}</span></>
-                : <>Safe to spend today <b className="num text-base font-normal">{sgd(safe.perDay)}</b> <span className="num text-[11px] font-medium text-muted">{sgd(safe.remaining)} over {safe.daysLeft} days</span></>}
+            <p className="num mt-1.5 pr-12 text-[19px] font-bold leading-snug tracking-tight">{weekHeadline({ total: al.allowance.total, spent: al.spent, endDate: al.week.endDate })}</p>
+            <ReceiptPaceBar pace={weekPace} soft marker={{ subject: "this week's allowance", marker: `day ${al.week.day} of 7` }} />
+            <p className="num mt-1 text-xs text-muted">{monthLine(al.month)}</p>
+            {weekUsualEl}
+            <p className={`mt-3 rounded-full border-[1.5px] px-3 py-2 text-[13px] font-bold ${al.safe.over ? "border-lifestyle bg-pill text-lifestyle-ink" : "border-mint-line bg-mint-bg"}`}>
+              {al.safe.over
+                ? <>Allowance used up for this week. No rush, it resets soon.</>
+                : <>Safe to spend today <b className="num text-base font-normal">{sgd(al.safe.perDay)}</b> <span className="num text-[11px] font-medium text-muted">{safeNote(al.safe)}</span></>}
             </p>
           </>
         ) : (
-          <p className="mt-3 text-sm font-bold text-accent">Set a Lifestyle budget to see pace and safe-to-spend ›</p>
+          <>
+            <p className="num mt-1.5 pr-12 text-[30px] leading-[1.1] tracking-tight">
+              {sgd(g.lifestyle)}
+              {pace && <span className="text-[15px] text-muted"> / {sgd(lifeBudget)}</span>}
+            </p>
+            {weekUsualEl}
+            {pace && safe ? (
+              <>
+                <ReceiptPaceBar pace={pace} />
+                <p className={`mt-4 rounded-full border-[1.5px] px-3 py-2 text-[13px] font-bold ${safe.exceeded ? "border-lifestyle bg-pill text-lifestyle-ink" : "border-mint-line bg-mint-bg"}`}>
+                  {safe.exceeded
+                    ? <>Over budget by <span className="num text-base">{sgd(-safe.remaining)}</span></>
+                    : <>Safe to spend today <b className="num text-base font-normal">{sgd(safe.perDay)}</b> <span className="num text-[11px] font-medium text-muted">{sgd(safe.remaining)} over {safe.daysLeft} days</span></>}
+                </p>
+              </>
+            ) : (
+              <p className="mt-3 text-sm font-bold text-accent">Set a Lifestyle budget to see pace and safe-to-spend ›</p>
+            )}
+          </>
         )}
       </Link>
 
@@ -96,7 +139,29 @@ export function Home() {
         {g.uncategorised > 0 && <p className="pt-1 text-xs text-muted">Plus <span className="num">{sgd(g.uncategorised)}</span> uncategorised</p>}
       </section>
 
-      <section className="mb-6 mt-4" aria-label="Recent">
+      {nwLine && (
+        <Link to="/money/networth" className="tap num mt-3 flex items-center justify-between rounded-full bg-card px-4 text-[13px] shadow-sm active:bg-line/40" aria-label="Net worth">
+          <span>{nwLine}</span><span aria-hidden className="text-accent">›</span>
+        </Link>
+      )}
+      {goalsLine && (
+        <Link to="/money/goals" className="tap num mt-2 flex items-center justify-between rounded-full bg-card px-4 text-[13px] shadow-sm active:bg-line/40" aria-label="Goals">
+          <span>{goalsLine}</span><span aria-hidden className="text-accent">›</span>
+        </Link>
+      )}
+
+      {planLine && (
+        <Link to="/money/plan" className="tap num mt-2 flex items-center justify-between rounded-full bg-card px-4 text-[13px] shadow-sm active:bg-line/40" aria-label="Plan">
+          <span>{planLine}</span><span aria-hidden className="text-accent">›</span>
+        </Link>
+      )}
+
+      <div className="mt-2 flex items-center justify-between gap-3 px-1">
+        {notBought ? <Link to="/wants?tab=decided" className="num min-w-0 truncate text-xs text-muted">{notBought}</Link> : <span />}
+        <Link to={wantsAddLink({})} className="tap shrink-0 text-xs font-bold text-accent">Want, not buy</Link>
+      </div>
+
+      <section className="mb-6 mt-2" aria-label="Recent">
         <h2 className="px-1 pb-1.5 text-[13px] font-bold text-muted">Latest</h2>
         <div className="receipt overflow-visible rounded-[18px] bg-card shadow-sm">
           {(recent.data ?? []).length === 0 && <p className="p-5 text-center text-sm text-muted">No transactions yet. Tap + to add your first.</p>}

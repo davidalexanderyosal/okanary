@@ -5,6 +5,7 @@ const PATHS: Record<string, ReactNode> = {
   list: <path d="M5 7h14M5 12h14M5 17h9" />,
   pie: <><path d="M12 4a8 8 0 1 0 8 8h-8z" /><path d="M15 3.5A8 8 0 0 1 20.5 9H15z" /></>,
   bars: <path d="M6 19V11M12 19V5M18 19v-6" />,
+  money: <><path d="M4 8a2 2 0 0 1 2-2h11v3" /><path d="M4 8v9a2 2 0 0 0 2 2h12a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1H6a2 2 0 0 1-2-1z" /><path d="M15.5 14h.1" /></>,
   plus: <path d="M12 5v14M5 12h14" />,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8" /></>,
   // category-group glyphs

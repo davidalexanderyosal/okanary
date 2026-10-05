@@ -75,7 +75,7 @@ Features were picked from what established apps do (Copilot Money, Monarch, YNAB
 
 ### 3.3 Deliberately left out
 
-Net worth, investment tracking, bill-pay reminders for non-card bills, shared/household budgets, gamified streaks, receipt OCR, and AI chat. They add build time without directly helping "see and control day-to-day spend". Can be revisited later.
+~~Net worth, investment tracking~~ (added in v2, see §13), bill-pay reminders for non-card bills, shared/household budgets, gamified streaks, receipt OCR, and AI chat. They add build time without directly helping "see and control day-to-day spend". Can be revisited later.
 
 ---
 
@@ -355,6 +355,43 @@ Later phases follow the same pattern: "Phase N of okanary-spec.md is implemented
 After Phase 1 is working, start the next session with: *"Read okanary-spec.md and the existing code. Implement Phase 2 only."* and so on per phase.
 
 ---
+
+## 13. v2 features (docs/feature-brief-v2.md)
+
+Built in the order A → U → N → G → W → S → P; mapping and conflicts in `docs/plan-v2.md`, decisions D-47 onward.
+
+### 13.A Weekly Lifestyle allowance (built)
+- Week = SGT, start day configurable (default Monday). Allowance = Σ over the months the week touches of `budget × days ÷ days_in_month` (cumulative rounding, exact month sums), or a fixed weekly override. Optional carry-over within a month (default off).
+- Home Lifestyle card leads with "This week: S$X left of S$Y · resets Mon"; safe-to-spend today = (allowance − spent this week) ÷ days left in the week. Post-purchase push: "… — S$96 left this week".
+- Weekly alerts at 80% and 100% of the allowance, once per week (`alert_log` period `YYYY-Www`); monthly budget alerts unchanged.
+- Notification limit: max 2 nudge pushes per SGT day, quiet hours 23:00–08:00 (held, then sent); both configurable; post-purchase pushes exempt. Table `push_outbox`.
+
+### 13.U "Vs your usual" (built)
+- Month: spend to day d vs the average of days 1..min(d, length) over the last 3 complete months with data ("based on N months"; none → "Not enough history yet"). Week: first k days vs the last 4 complete weeks. Total, Lifestyle and each category (categories in Reports only); excluded trips left out; under ±5% = "about usual".
+- Home: "S$640 so far · 12% below your usual by day 14" (amber only when above). Lifestyle card: "Week: about usual". Reports: per-category vs usual. Weekly digest: "Lifestyle this week S$210 · usual S$185". API `GET /api/usual`.
+
+### 13.N Net worth (built)
+- Assets: cash accounts (manual balance + as-of, any currency), US stocks/ETFs and crypto holdings (decimal-string quantities, optional cost basis), manual-value assets; liabilities: credit cards from the card-cycle data (since statement + last statement until paid) and optional manual loans.
+- Prices: Finnhub → Alpha Vantage fallback, CoinGecko (SGD, attribution shown), FX via Frankfurter/fx_rates. Daily job 06:30 SGT writes price_quotes and one networth_snapshots row (idempotent); retries hourly to 12:00 SGT, then keeps the last price marked stale. "Refresh now" ≤ 1 per 5 minutes.
+- Display: total, 1-month and YTD change split "You saved" vs "Market"; daily change one tap away on the Net worth screen only, never pushed. Home: "Net worth S$xx,xxx · +S$X this month". Monthly summary push on the 1st at 09:00 SGT. Balances older than 30 days get an "update?" chip.
+
+### 13.G Goals (built)
+- Goals of any horizon (short < 2 y, mid 2–10 y, long ≥ 10 y, derived from the date and refreshed daily); kinds emergency / short / mid / long / retirement; explicit priority (emergency first). Mid/long targets in today's dollars, inflated per goal (default 3%); retirement helper = monthly × 12 × 25; emergency fund suggestion = 6 × average monthly Essentials.
+- Value from linked net-worth accounts/holdings (at a share) and earmarks, plus transferred contributions for goals without share links; pledges never count until transferred. Required monthly, current pace (market excluded), projected value/completion, On track / Ahead / Behind, ±2 pp range for long goals. "Move to safer funding?" once when a stock/crypto-funded goal drops below 2 years.
+- Pledges: weekly underspend (Monday 00:00 SGT, to the receiving goal), skipped wants (W) and commission splits (P); Transferred / Skip in the app or from the push. Home: "Goals: 4 on track · 1 behind (MBA −S$120/mo)".
+
+### 13.W Want list (built)
+- "Want, not buy" (Quick add and Home) adds an item with a wait of 3 / 7 (default) / 30 days or custom; 30 by default above S$200. When the wait ends the item becomes Ready and one batched push asks "Still want AirPods case (S$59)? Buy / Skip" (counts toward the nudge limit).
+- Skip → optional pledge of the price to the receiving goal; Buy → optional link to a matching transaction (±10%, 14 days); an early buy is recorded without comment. "Not bought this year: S$412 (9 items)" on Home and Reports.
+
+### 13.S Subscriptions hub (built)
+- One `subscriptions` table (Phase 5 `recurring` migrated in place). Ways in: detection (2 consecutive monthly charges ±15% → candidate + one push), manual add with a catalogue, Apple receipts (UNVERIFIED parser labels APPLE.COM/BILL charges), other receipts via AI → Review inbox, free trials (reminder 2 days before the end).
+- Monthly/yearly equivalents and totals (Essentials vs Lifestyle); annual renewals get a reminder 7 days before and a monthly set-aside in the plan; price-change alerts (> max(2%, S$0.50), +3% for foreign currency) with Accept / Review; missing charge flag (> 7 days late, no push); quarterly "Still using?" batched push; cost in goal terms ("Cancelling moves 'Japan trip' 3 weeks earlier"). Okanary records the intent to cancel and opens the service's page; it never cancels anything.
+
+### 13.P Income & personalised plan (built)
+- Base take-home (Settings/Plan) is the planning floor; commission and bonuses are logged when received and never raise the regular Lifestyle budget. Commission split (default 70% goals in priority order, behind first / 20% guilt-free added to this week's allowance / 10% buffer to the emergency fund) becomes pledges David confirms.
+- Plan engine: fixed (subscriptions + annual set-asides + Essentials baseline, overridable) + goals (Σ required, priority order) + Lifestyle (the rest, floor 60% / cap +10% of the usual, excess to goals). Infeasible → computed trade-offs (push back goal dates, lower Lifestyle with the weekly figure, commission coverage with ≥ 3 months of history). Percentages vs 50/30/20 and 60/20/20 as context only.
+- Accepting a plan sets the monthly Lifestyle budget (→ A's weekly allowance) and each goal's planned monthly; manual budgets show as "manual". Monthly check-in with plan vs actual on the 1st. Onboarding wizard on first open.
 
 ## Sources
 

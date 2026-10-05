@@ -1,0 +1,12 @@
+Return-Path: <no_reply@email.apple.com>
+Authentication-Results: mx.cloudflare.net; dkim=pass header.d=email.apple.com header.s=sel1; spf=pass
+From: Apple <no_reply@email.apple.com>
+To: owner@example.com
+Subject: Your receipt from Apple.
+Date: Mon, 05 Oct 2026 10:00:00 +0800
+Message-ID: <synthetic-apple-receipt-3@email.apple.com>
+Content-Type: text/plain; charset=utf-8
+
+Thanks for your purchase. We have charged your card three dollars ninety-eight
+for your iCloud storage plan. Keep this message for your records.
+SYNTHETIC FIXTURE: unreadable layout, the parser must return null.

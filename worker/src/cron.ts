@@ -1,11 +1,17 @@
+import { sgtDate, sgtParts } from "@okanary/core";
 import type { Deps } from "./deps";
 import type { Env } from "./env";
 import { sendWeeklyDigest } from "./digest";
 import { getSgdRate } from "./fx";
-import { sendPushToAll } from "./push";
-import { runRecurringDetection } from "./recurring";
+import { runUnderspendPledges, underspendDue } from "./goals";
+import { hasSnapshot, runNetworthJob, symbolsMissingFreshQuote } from "./networth-job";
+import { rematchAppleReceipts } from "./receipts";
+import { sendMonthlySummary } from "./networth-summary";
+import { flushOutbox, sendNudge } from "./nudge-gate";
+import { runMissingCharges, runRenewalReminders, runSubscriptionDetection, runTrialReminders, runUsageCheck } from "./subscriptions";
 import { tripCovering } from "./trips";
 import { nowIso, ulid } from "./util";
+import { runWantsReady } from "./wants";
 
 const STALE_PENDING_MS = 24 * 3600_000;
 const EMAIL_SILENCE_DAYS = 3;
@@ -29,7 +35,7 @@ export async function emailHealthAlerts(env: Env, deps: Deps): Promise<string[]>
     const done = await env.DB.prepare("SELECT 1 AS x FROM alert_log WHERE kind = 'email_health' AND ref = ? AND period = ?").bind(bank, period).first();
     if (done) continue;
     await env.DB.prepare("INSERT INTO alert_log (id, kind, ref, period, sent_at) VALUES (?,?,?,?,?)").bind(ulid(), "email_health", bank, period, nowIso()).run();
-    await sendPushToAll(env, deps, { title: "Okanary", body: `No ${bank.toUpperCase()} alert emails for ${Math.floor(days)} days. Check your Gmail forwarding filter.`, url: "/setup", tag: `health-${bank}` });
+    await sendNudge(env, deps, { title: "Okanary", body: `No ${bank.toUpperCase()} alert emails for ${Math.floor(days)} days. Check your Gmail forwarding filter.`, url: "/setup", tag: `health-${bank}` }, "email_health");
     sent.push(bank);
   }
   return sent;
@@ -48,18 +54,55 @@ export async function refreshFx(env: Env, deps: Deps): Promise<string[]> {
 
 /** Cron expressions (wrangler.jsonc "triggers.crons"). UTC; SGT = UTC+8. */
 export const CRON_HOURLY = "0 * * * *";
-export const CRON_DAILY = "0 18 * * *"; // 02:00 SGT: recurring detection
+export const CRON_DAILY = "0 18 * * *"; // 02:00 SGT: subscription detection + reminders
 export const CRON_WEEKLY = "0 12 * * 0"; // Sunday 20:00 SGT: weekly digest
+export const CRON_NETWORTH = "30 22 * * *"; // 06:30 SGT (after the US close): net worth prices + daily snapshot
+
+/**
+ * Net worth retries from the hourly trigger (plan-v2 §2.3): 07:00-11:00 SGT re-run (only the symbols still lacking a fresh
+ * quote) while today's snapshot is missing or a held symbol has no fresh quote; at 12:00 SGT one last run with final: true keeps
+ * the last known price, marked stale.
+ */
+export async function networthHourly(env: Env, deps: Deps): Promise<"retry" | "final" | null> {
+  const now = deps.now();
+  const hour = sgtParts(now).hour;
+  if (hour < 7 || hour > 12) return null;
+  const today = sgtDate(now);
+  const incomplete = !(await hasSnapshot(env.DB, today)) || (await symbolsMissingFreshQuote(env.DB, today)).length > 0;
+  if (!incomplete) return null;
+  if (hour < 12) { await runNetworthJob(env, deps, { retry: true }); return "retry"; }
+  await runNetworthJob(env, deps, { final: true, retry: true });
+  return "final";
+}
 
 /** Cron entry: dispatches on the trigger's own expression. */
 export async function runScheduled(env: Env, deps: Deps, cron: string): Promise<void> {
   if (cron === CRON_WEEKLY) {
     await sendWeeklyDigest(env, deps);
   } else if (cron === CRON_DAILY) {
-    await runRecurringDetection(env, deps);
+    // Subscriptions (v2 S): each step is isolated. Pushes go through the nudge gate, so a 02:00 run is delivered at 08:00.
+    const log = (what: string) => (e: unknown) => console.error(`${what} failed`, (e as Error).message);
+    await runSubscriptionDetection(env, deps).catch(log("subscription detection"));
+    await runTrialReminders(env, deps).catch(log("trial reminders"));
+    await runRenewalReminders(env, deps).catch(log("renewal reminders"));
+    await runMissingCharges(env, deps).catch(log("missing charges"));
+    await runUsageCheck(env, deps).catch(log("usage check"));
+    // Apple receipts that arrived before their card charge: try the match again (last 10 days).
+    await rematchAppleReceipts(env, deps).catch(log("apple receipt rematch"));
+  } else if (cron === CRON_NETWORTH) {
+    await runNetworthJob(env, deps);
   } else {
     await promoteStalePending(env, deps);
     await emailHealthAlerts(env, deps);
     await refreshFx(env, deps);
+    await flushOutbox(env, deps);
+    // Net worth steps are isolated: a failure here must not stop the jobs above or each other.
+    await networthHourly(env, deps).catch((e) => console.error("networth retry failed", (e as Error).message));
+    // Want list: waiting items whose wait is over become ready; ONE batched push through the nudge gate.
+    await runWantsReady(env, deps).catch((e) => console.error("wants ready failed", (e as Error).message));
+    // Monday 00:xx SGT (first day of the configured week): pledge last week's underspend to the receiving goal (once per week).
+    if (await underspendDue(env, deps).catch(() => false)) await runUnderspendPledges(env, deps).catch((e) => console.error("underspend pledges failed", (e as Error).message));
+    const sgt = sgtParts(deps.now());
+    if (sgt.day === 1 && sgt.hour === 9) await sendMonthlySummary(env, deps).catch((e) => console.error("monthly summary failed", (e as Error).message)); // 1st, 09:00 SGT
   }
 }

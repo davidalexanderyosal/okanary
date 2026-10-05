@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { convertMinor, currencySymbol, formatMoney, parseMajorToMinor, sgtDate, sgtLocalToUtc, sgtParts, type Account, type Category, type CategoryGroup } from "@okanary/core";
 import { api, type Trip } from "../lib/api";
 import { invalidateAll, useResource } from "../lib/data";
 import { chipOrder } from "../lib/chips";
 import { displayTyped, keypadMinor, pressKey, type KeypadKey } from "../lib/keypad";
+import { wantsAddLink } from "../lib/wants";
 import { groupColor } from "./groups";
 import { Sheet } from "./Sheet";
 import { useToast } from "./Toast";
@@ -24,6 +26,7 @@ export function QuickAdd({ open, onClose, groups, categories, usage, accounts }:
   open: boolean; onClose: () => void; groups: CategoryGroup[]; categories: Category[]; usage: Record<string, number>; accounts: Account[];
 }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const [amount, setAmount] = useState("");
   const [more, setMore] = useState(false);
   const [cat, setCat] = useState<string | null>(null);
@@ -85,6 +88,12 @@ export function QuickAdd({ open, onClose, groups, categories, usage, accounts }:
       toast({ msg: `Couldn't save: ${e instanceof Error ? e.message : e}` });
     }
   }
+
+  /** "Want, not buy": hand the typed amount / currency / merchant to the want list instead of recording a purchase. */
+  const wantInstead = () => {
+    onClose();
+    navigate(wantsAddLink({ amountMinor: minor, currency, name: merchant }));
+  };
 
   const onChip = (id: string) => (more ? setCat(id) : void save(id));
   const disabled = minor <= 0;
@@ -163,6 +172,9 @@ export function QuickAdd({ open, onClose, groups, categories, usage, accounts }:
         </div>
         <button onClick={() => setMore((m) => !m)} className="tap mt-2 w-full text-sm font-medium text-accent">
           {more ? "Fewer options" : "More: merchant, note, account, date…"}
+        </button>
+        <button onClick={wantInstead} className="tap w-full text-sm font-medium text-muted underline decoration-dotted underline-offset-4">
+          Want, not buy
         </button>
       </div>
     </Sheet>
