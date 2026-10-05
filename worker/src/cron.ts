@@ -55,7 +55,7 @@ export async function refreshFx(env: Env, deps: Deps): Promise<string[]> {
 /** Cron expressions (wrangler.jsonc "triggers.crons"). UTC; SGT = UTC+8. */
 export const CRON_HOURLY = "0 * * * *";
 export const CRON_DAILY = "0 18 * * *"; // 02:00 SGT: subscription detection + reminders
-export const CRON_WEEKLY = "0 12 * * 0"; // Sunday 20:00 SGT: weekly digest
+export const CRON_WEEKLY = "0 12 * * SUN"; // Sunday 20:00 SGT: weekly digest. NB: Cloudflare rejects "0" for Sunday (code 10100); use SUN or 1-7
 export const CRON_NETWORTH = "30 22 * * *"; // 06:30 SGT (after the US close): net worth prices + daily snapshot
 
 /**

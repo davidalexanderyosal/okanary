@@ -24,7 +24,7 @@ each feature lands.
 | `behaviour-features.md`, `money-plan-features.md` | Not in the repo | Nothing to archive |
 | `CLAUDE.md` | Did not exist | Added with the plan (repo rules for agents) |
 
-Crons today (UTC): `0 * * * *` hourly, `0 18 * * *` (02:00 SGT recurring detection), `0 12 * * 0` (Sun 20:00 SGT digest).
+Crons today (UTC): `0 * * * *` hourly, `0 18 * * *` (02:00 SGT recurring detection), `0 12 * * SUN` (Sun 20:00 SGT digest).
 
 ## 2. Cross-cutting infrastructure (built inside A, used by all)
 
@@ -41,7 +41,7 @@ Crons today (UTC): `0 * * * *` hourly, `0 18 * * *` (02:00 SGT recurring detecti
      rows older than 72 h are dropped.
    - pure decision function in core: `nudgeDecision(now, sentToday, limit, quiet)` → `send | hold(until)`.
 3. **Cron dispatch**: keep 4 triggers (Cloudflare free plan allows 5): hourly, `30 22 * * *` (06:30 SGT, N prices),
-   `0 18 * * *`, `0 12 * * 0`. Time-of-day jobs (Monday 00:00 SGT underspend pledges, 1st-of-month 09:00 SGT summary,
+   `0 18 * * *`, `0 12 * * SUN`. Time-of-day jobs (Monday 00:00 SGT underspend pledges, 1st-of-month 09:00 SGT summary,
    08:00 outbox flush, want-ready, trial/renewal reminders, N retries until 12:00) run from the hourly trigger,
    dispatched on SGT wall-clock (`hourlyJobs(sgtNow)` pure function in core lists which jobs are due).
 4. **Settings** stay in the `settings` key/value table, exposed through `PUT /api/settings` (extended per feature).
